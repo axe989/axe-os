@@ -15,12 +15,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!user && !isLoginPage) {
-    const loginUrl = request.nextUrl.clone();
-
-    loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("next", pathname);
-
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   if (user && isLoginPage) {

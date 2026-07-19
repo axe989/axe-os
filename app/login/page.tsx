@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import LoginForm from "./login-form";
 
 export const dynamic = "force-dynamic";
@@ -61,9 +60,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <Suspense fallback={<p>Загрузка...</p>}>
-            <LoginForm />
-          </Suspense>
+          <LoginForm />
 
           <p className="login-security">
             Доступ разрешен только авторизованным сотрудникам.
