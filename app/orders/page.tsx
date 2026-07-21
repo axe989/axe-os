@@ -1,3 +1,4 @@
+import SyncKaspiButton from "./SyncKaspiButton";
 import Link from "next/link";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
@@ -107,9 +108,20 @@ export default async function OrdersPage() {
               <p>Данные загружены из таблицы sales_orders</p>
             </div>
 
-            <a href="/api/orders" className="api-link">
-              Открыть JSON
-            </a>
+            <div
+  style={{
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 12,
+  }}
+>
+  <SyncKaspiButton />
+
+  <a href="/api/orders" className="api-link">
+    Открыть JSON
+  </a>
+</div>
+
           </div>
 
           <div className="table-wrap">
