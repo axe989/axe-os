@@ -1,8 +1,34 @@
-import SyncKaspiButton from "./SyncKaspiButton";
 import Link from "next/link";
+import SyncKaspiButton from "./SyncKaspiButton";
+import OrderFinanceEditor from "./OrderFinanceEditor";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+type OrderItem = {
+  name?: string;
+  productName?: string;
+  quantity?: number;
+  count?: number;
+};
+
+type OrderRow = {
+  id: string;
+  external_code: string | null;
+  external_status: string | null;
+  order_date: string;
+  customer_name: string | null;
+  sale_amount: number | string | null;
+  delivery_type: string | null;
+  items: unknown;
+  purchased: boolean | null;
+  supplier: string | null;
+  purchase_price: number | string | null;
+  logistics_cost: number | string | null;
+  advertising_cost: number | string | null;
+  profit: number | string | null;
+  margin: number | string | null;
+};
 
 function formatMoney(value: number | string | null) {
   const amount = Number(value ?? 0);
@@ -11,6 +37,14 @@ function formatMoney(value: number | string | null) {
     style: "currency",
     currency: "KZT",
     maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatPercent(value: number | string | null) {
+  const amount = Number(value ?? 0);
+
+  return new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 1,
   }).format(amount);
 }
 
@@ -32,18 +66,24 @@ function statusLabel(status: string | null) {
     DELIVERY: "Доставка",
     PICKUP: "Самовывоз",
     NEW: "Новый",
+    SIGN_REQUIRED: "Требуется подпись",
+    ARCHIVE: "Архив",
   };
 
   return labels[status ?? ""] ?? status ?? "—";
 }
 
+function getItems(value: unknown): OrderItem[] {
+  return Array.isArray(value) ? (value as OrderItem[]) : [];
+}
+
 export default async function OrdersPage() {
   const supabase = createSupabaseAdminClient();
 
-  const { data: orders, error } = await supabase
+  const { data, error } = await supabase
     .from("sales_orders")
     .select(
-      "id, external_code, external_status, order_date, customer_name, sale_amount, delivery_type",
+      "id, external_code, external_status, order_date, customer_name, sale_amount, delivery_type, items, purchased, supplier, purchase_price, logistics_cost, advertising_cost, profit, margin",
     )
     .eq("sales_channel", "kaspi")
     .order("order_date", { ascending: false })
@@ -58,16 +98,31 @@ export default async function OrdersPage() {
     );
   }
 
-  const totalOrders = orders?.length ?? 0;
-  const totalSales =
-    orders?.reduce(
-      (sum, order) => sum + Number(order.sale_amount ?? 0),
-      0,
-    ) ?? 0;
+  const orders = (data ?? []) as unknown as OrderRow[];
 
-  const cancelled =
-    orders?.filter((order) => order.external_status === "CANCELLED")
-      .length ?? 0;
+  const activeOrders = orders.filter(
+    (order) => order.external_status !== "CANCELLED",
+  );
+
+  const totalOrders = orders.length;
+
+  const totalSales = activeOrders.reduce(
+    (sum, order) => sum + Number(order.sale_amount ?? 0),
+    0,
+  );
+
+  const totalProfit = activeOrders.reduce(
+    (sum, order) => sum + Number(order.profit ?? 0),
+    0,
+  );
+
+  const pendingPurchase = activeOrders.filter(
+    (order) => !order.purchased,
+  ).length;
+
+  const cancelled = orders.filter(
+    (order) => order.external_status === "CANCELLED",
+  ).length;
 
   return (
     <main className="orders-page">
@@ -76,7 +131,7 @@ export default async function OrdersPage() {
           <div>
             <div className="brand">AXE ENGINEERING</div>
             <h1>Заказы Kaspi</h1>
-            <p>Последние 100 заказов из Supabase</p>
+            <p>Закупка, затраты и прибыль по каждому заказу</p>
           </div>
 
           <Link href="/" className="back-link">
@@ -84,15 +139,25 @@ export default async function OrdersPage() {
           </Link>
         </header>
 
-        <section className="metrics">
+        <section className="metrics orders-metrics">
           <article className="metric-card">
             <span>Заказы</span>
             <strong>{totalOrders}</strong>
           </article>
 
           <article className="metric-card">
-            <span>Оборот</span>
+            <span>Оборот без отмен</span>
             <strong>{formatMoney(totalSales)}</strong>
+          </article>
+
+          <article className="metric-card">
+            <span>Расчётная прибыль</span>
+            <strong>{formatMoney(totalProfit)}</strong>
+          </article>
+
+          <article className="metric-card">
+            <span>Нужно закупить</span>
+            <strong>{pendingPurchase}</strong>
           </article>
 
           <article className="metric-card">
@@ -105,67 +170,143 @@ export default async function OrdersPage() {
           <div className="table-heading">
             <div>
               <h2>Лента заказов</h2>
-              <p>Данные загружены из таблицы sales_orders</p>
+              <p>
+                Финансовые показатели сохраняются в sales_orders
+              </p>
             </div>
 
-            <div
-  style={{
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 12,
-  }}
->
-  <SyncKaspiButton />
+            <div className="table-actions">
+              <SyncKaspiButton />
 
-  <a href="/api/orders" className="api-link">
-    Открыть JSON
-  </a>
-</div>
-
+              <Link href="/api/orders" className="api-link">
+                Открыть JSON
+              </Link>
+            </div>
           </div>
 
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Номер</th>
-                  <th>Дата</th>
-                  <th>Клиент</th>
-                  <th>Статус</th>
-                  <th>Доставка</th>
-                  <th className="amount">Сумма</th>
-                </tr>
-              </thead>
+          <div className="orders-list">
+            {orders.map((order) => {
+              const items = getItems(order.items);
+              const profit = Number(order.profit ?? 0);
+              const isCancelled =
+                order.external_status === "CANCELLED";
 
-              <tbody>
-                {orders?.map((order) => (
-                  <tr key={order.id}>
-                    <td>
-                      <strong>{order.external_code ?? "—"}</strong>
-                    </td>
-                    <td>{formatDate(order.order_date)}</td>
-                    <td>{order.customer_name ?? "—"}</td>
-                    <td>
-                      <span
-                        className={
-                          order.external_status === "CANCELLED"
-                            ? "status status-cancelled"
-                            : order.external_status === "COMPLETED"
-                              ? "status status-completed"
-                              : "status status-active"
-                        }
-                      >
-                        {statusLabel(order.external_status)}
-                      </span>
-                    </td>
-                    <td>{order.delivery_type ?? "—"}</td>
-                    <td className="amount">
-                      {formatMoney(order.sale_amount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              return (
+                <article
+                  key={order.id}
+                  className={
+                    isCancelled
+                      ? "order-card order-card-cancelled"
+                      : "order-card"
+                  }
+                >
+                  <div className="order-summary">
+                    <div className="order-main">
+                      <div className="order-number-row">
+                        <strong className="order-number">
+                          № {order.external_code ?? "—"}
+                        </strong>
+
+                        <span
+                          className={
+                            isCancelled
+                              ? "status status-cancelled"
+                              : order.external_status === "COMPLETED"
+                                ? "status status-completed"
+                                : "status status-active"
+                          }
+                        >
+                          {statusLabel(order.external_status)}
+                        </span>
+                      </div>
+
+                      <div className="order-meta">
+                        <span>{formatDate(order.order_date)}</span>
+
+                        <span>
+                          {order.customer_name ??
+                            "Клиент не указан"}
+                        </span>
+
+                        <span>
+                          {order.delivery_type ??
+                            "Тип доставки не указан"}
+                        </span>
+                      </div>
+
+                      {items.length > 0 ? (
+                        <div className="order-items">
+                          {items.map((item, index) => (
+                            <div key={`${order.id}-${index}`}>
+                              {item.name ??
+                                item.productName ??
+                                "Товар"}
+                              {" × "}
+                              {item.quantity ?? item.count ?? 1}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="order-items-empty">
+                          Состав заказа пока не загружен из Kaspi
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="order-financial-summary">
+                      <div>
+                        <span>Продажа</span>
+                        <strong>
+                          {formatMoney(order.sale_amount)}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>Прибыль</span>
+                        <strong
+                          className={
+                            profit < 0
+                              ? "profit-negative"
+                              : "profit-positive"
+                          }
+                        >
+                          {formatMoney(profit)}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>Маржа</span>
+                        <strong>
+                          {formatPercent(order.margin)}%
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!isCancelled ? (
+                    <OrderFinanceEditor
+                      orderId={order.id}
+                      purchased={Boolean(order.purchased)}
+                      supplier={order.supplier}
+                      purchasePrice={order.purchase_price}
+                      logisticsCost={order.logistics_cost}
+                      advertisingCost={order.advertising_cost}
+                    />
+                  ) : (
+                    <div className="cancelled-note">
+                      Финансовое редактирование отменённого заказа
+                      отключено
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+
+            {orders.length === 0 ? (
+              <div className="empty-orders">
+                Заказы пока не загружены
+              </div>
+            ) : null}
           </div>
         </section>
       </div>

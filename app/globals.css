@@ -425,3 +425,264 @@ tbody tr:hover {
     padding: 28px;
   }
 }
+
+/* AXE OS: order finance management */
+
+.orders-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.table-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.orders-list {
+  display: grid;
+  gap: 16px;
+}
+
+.order-card {
+  overflow: hidden;
+  border: 1px solid #dfe6f0;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.order-card-cancelled {
+  background: #fffafa;
+  opacity: 0.82;
+}
+
+.order-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  padding: 22px;
+}
+
+.order-main {
+  min-width: 0;
+}
+
+.order-number-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.order-number {
+  font-size: 20px;
+}
+
+.order-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.order-items {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.order-items-empty {
+  margin-top: 14px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.order-financial-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, auto));
+  gap: 12px;
+}
+
+.order-financial-summary div {
+  min-width: 120px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.order-financial-summary span,
+.order-financial-summary strong {
+  display: block;
+}
+
+.order-financial-summary span {
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.order-financial-summary strong {
+  font-size: 16px;
+}
+
+.profit-positive {
+  color: #15803d;
+}
+
+.profit-negative {
+  color: #b91c1c;
+}
+
+.finance-editor {
+  padding: 18px 22px 22px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.purchase-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.purchase-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+}
+
+.order-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.order-input:focus {
+  border-color: #2563eb;
+  outline: 3px solid rgba(37, 99, 235, 0.12);
+}
+
+.supplier-input {
+  max-width: 360px;
+  margin-bottom: 14px;
+}
+
+.finance-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 220px));
+  gap: 12px;
+}
+
+.finance-fields label {
+  display: grid;
+  gap: 6px;
+}
+
+.finance-fields label span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.finance-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.save-order-button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.save-order-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.save-message {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.save-message.success {
+  color: #15803d;
+}
+
+.save-message.error {
+  color: #b91c1c;
+}
+
+.cancelled-note {
+  padding: 16px 22px;
+  border-top: 1px solid #fee2e2;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.empty-orders {
+  padding: 48px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+@media (max-width: 1200px) {
+  .orders-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .order-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .order-financial-summary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .orders-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .table-heading,
+  .table-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .order-summary {
+    padding: 18px;
+  }
+
+  .order-financial-summary,
+  .finance-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .order-financial-summary div {
+    min-width: 0;
+  }
+
+  .supplier-input {
+    max-width: none;
+  }
+}
