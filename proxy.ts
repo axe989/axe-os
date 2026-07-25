@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const { response, user } = await updateSession(request);
 
@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
 
   if (user && isLoginPage) {
     return NextResponse.redirect(
-      new URL("/orders", request.url),
+      new URL("/dashboard", request.url),
     );
   }
 

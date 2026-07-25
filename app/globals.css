@@ -37,33 +37,6 @@ body {
   margin: 0 auto;
 }
 
-.orders-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 32px;
-}
-
-.orders-header h1 {
-  margin: 8px 0 8px;
-  font-size: 48px;
-  line-height: 1;
-}
-
-.orders-header p {
-  margin: 0;
-  color: #64748b;
-  font-size: 18px;
-}
-
-.brand {
-  color: #2563eb;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-}
-
-.back-link,
 .api-link {
   display: inline-flex;
   align-items: center;
@@ -193,14 +166,6 @@ tbody tr:hover {
 @media (max-width: 800px) {
   .orders-page {
     padding: 28px 14px;
-  }
-
-  .orders-header {
-    flex-direction: column;
-  }
-
-  .orders-header h1 {
-    font-size: 36px;
   }
 
   .metrics {

@@ -127,18 +127,6 @@ export default async function OrdersPage() {
   return (
     <main className="orders-page">
       <div className="orders-shell">
-        <header className="orders-header">
-          <div>
-            <div className="brand">AXE ENGINEERING</div>
-            <h1>Заказы Kaspi</h1>
-            <p>Закупка, затраты и прибыль по каждому заказу</p>
-          </div>
-
-          <Link href="/" className="back-link">
-            Поставщики
-          </Link>
-        </header>
-
         <section className="metrics orders-metrics">
           <article className="metric-card">
             <span>Заказы</span>
