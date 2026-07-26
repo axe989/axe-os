@@ -48,7 +48,7 @@ export default async function DashboardPage({
 
   if ("error" in result) {
     return (
-      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+      <div className="mx-auto w-full max-w-screen-2xl min-w-0 space-y-6 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         <DateRangeBar />
 
         <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
@@ -64,10 +64,10 @@ export default async function DashboardPage({
   const data = result.data;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+    <div className="mx-auto w-full max-w-screen-2xl min-w-0 space-y-6 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
       <DateRangeBar />
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <KpiCard
           label="Оборот"
           value={formatMoney(data.revenue)}
@@ -118,16 +118,18 @@ export default async function DashboardPage({
         />
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <div className="min-w-0 space-y-6">
           <QuickActions />
           <RecentOrders orders={data.recentOrders} />
         </div>
 
-        <AttentionWidget
-          notPurchased={data.attention.notPurchased}
-          negativeMargin={data.attention.negativeMargin}
-        />
+        <div className="min-w-0">
+          <AttentionWidget
+            notPurchased={data.attention.notPurchased}
+            negativeMargin={data.attention.negativeMargin}
+          />
+        </div>
       </section>
     </div>
   );

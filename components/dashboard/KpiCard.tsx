@@ -25,9 +25,11 @@ export default function KpiCard({
   tone = "default",
 }: KpiCardProps) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-500">{label}</span>
+        <span className="min-w-0 truncate text-sm font-medium text-slate-500">
+          {label}
+        </span>
 
         <span
           className={`flex h-9 w-9 items-center justify-center rounded-xl ${TONE_STYLES[tone]}`}

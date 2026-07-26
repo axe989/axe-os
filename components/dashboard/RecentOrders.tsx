@@ -54,7 +54,7 @@ type RecentOrdersProps = {
 
 export default function RecentOrders({ orders }: RecentOrdersProps) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-base font-semibold text-slate-900">
           Последние заказы

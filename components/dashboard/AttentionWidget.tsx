@@ -67,7 +67,7 @@ export default function AttentionWidget({
   );
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="mb-4 text-base font-semibold text-slate-900">
         Требует внимания
       </h2>

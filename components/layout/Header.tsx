@@ -27,7 +27,7 @@ export default function Header({ userEmail }: HeaderProps) {
   const meta = PAGE_META[pathname] ?? { title: "AXE OS", subtitle: "" };
 
   return (
-    <header className="fixed inset-x-0 top-0 z-20 ml-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-sm lg:ml-64 md:px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-sm md:px-6">
       <div className="min-w-0">
         <h1 className="truncate text-base font-semibold text-slate-900 md:text-lg">
           {meta.title}

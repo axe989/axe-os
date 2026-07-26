@@ -17,9 +17,13 @@ export default async function DashboardShellLayout({
   return (
     <div className="min-h-screen bg-slate-50">
       <Sidebar />
-      <Header userEmail={user?.email ?? null} />
 
-      <main className="ml-20 min-h-screen pt-16 lg:ml-64">{children}</main>
+      {/* Padding here must stay in sync with Sidebar's fixed width (w-20 / lg:w-64) */}
+      <div className="min-w-0 pl-20 lg:pl-64">
+        <Header userEmail={user?.email ?? null} />
+
+        <main className="min-w-0 overflow-x-hidden">{children}</main>
+      </div>
     </div>
   );
 }
