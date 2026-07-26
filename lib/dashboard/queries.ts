@@ -1,10 +1,17 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { isOrderInTransit } from "@/lib/orders/status";
 import type { DateRange } from "./date-range";
 
 export type DashboardOrder = {
   id: string;
   external_code: string | null;
+  // Kaspi's `attributes.status` disposition (ACCEPTED_BY_MERCHANT,
+  // COMPLETED, CANCELLED, CANCELLING, RETURNED, ...). See lib/orders/status.ts.
   external_status: string | null;
+  // Kaspi's `attributes.state` pipeline bucket (NEW, DELIVERY,
+  // KASPI_DELIVERY, PICKUP, ARCHIVE, ...). NOT the same axis as
+  // external_status above — see lib/orders/status.ts.
+  status: string | null;
   order_date: string;
   customer_name: string | null;
   sale_amount: number | string | null;
@@ -14,10 +21,6 @@ export type DashboardOrder = {
   profit: number | string | null;
   margin: number | string | null;
 };
-
-// "В пути" — order has left the seller and is being transported to the
-// customer or a pickup point, but has not been finalized yet.
-const IN_TRANSIT_STATUSES = ["DELIVERY", "KASPI_DELIVERY", "PICKUP"];
 
 // "Поступившие" — order fully fulfilled and settled. Used to keep the
 // average check from being skewed by orders still in transit or cancelled.
@@ -58,7 +61,7 @@ export async function getDashboardData(
   const { data, error } = await supabase
     .from("sales_orders")
     .select(
-      "id, external_code, external_status, order_date, customer_name, sale_amount, delivery_type, items, purchased, profit, margin",
+      "id, external_code, external_status, status, order_date, customer_name, sale_amount, delivery_type, items, purchased, profit, margin",
     )
     .eq("sales_channel", "kaspi")
     .gte("order_date", range.from.toISOString())
@@ -93,7 +96,10 @@ export async function getDashboardData(
   );
 
   const transitOrders = activeOrders.filter((order) =>
-    IN_TRANSIT_STATUSES.includes(order.external_status ?? ""),
+    isOrderInTransit({
+      kaspiState: order.status,
+      kaspiDisposition: order.external_status,
+    }),
   );
 
   const transitAmount = transitOrders.reduce(

@@ -96,6 +96,7 @@ export default async function DashboardPage({
           value={String(data.transitCount)}
           helper={`На сумму ${formatMoney(data.transitAmount)}`}
           icon={Truck}
+          href="/orders?filter=transit"
         />
 
         <KpiCard

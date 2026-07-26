@@ -2,6 +2,7 @@ import Link from "next/link";
 import SyncKaspiButton from "./SyncKaspiButton";
 import OrderFinanceEditor from "./OrderFinanceEditor";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { isOrderInTransit } from "@/lib/orders/status";
 import {
   formatMoney,
   formatOrderDate,
@@ -16,6 +17,7 @@ type OrderRow = {
   id: string;
   external_code: string | null;
   external_status: string | null;
+  status: string | null;
   order_date: string;
   customer_name: string | null;
   sale_amount: number | string | null;
@@ -30,13 +32,20 @@ type OrderRow = {
   margin: number | string | null;
 };
 
-export default async function OrdersPage() {
+type OrdersPageProps = {
+  searchParams: Promise<{ filter?: string }>;
+};
+
+export default async function OrdersPage({ searchParams }: OrdersPageProps) {
+  const { filter } = await searchParams;
+  const isTransitFilter = filter === "transit";
+
   const supabase = createSupabaseAdminClient();
 
   const { data, error } = await supabase
     .from("sales_orders")
     .select(
-      "id, external_code, external_status, order_date, customer_name, sale_amount, delivery_type, items, purchased, supplier, purchase_price, logistics_cost, advertising_cost, profit, margin",
+      "id, external_code, external_status, status, order_date, customer_name, sale_amount, delivery_type, items, purchased, supplier, purchase_price, logistics_cost, advertising_cost, profit, margin",
     )
     .eq("sales_channel", "kaspi")
     .order("order_date", { ascending: false })
@@ -51,7 +60,16 @@ export default async function OrdersPage() {
     );
   }
 
-  const orders = (data ?? []) as unknown as OrderRow[];
+  const allOrders = (data ?? []) as unknown as OrderRow[];
+
+  const orders = isTransitFilter
+    ? allOrders.filter((order) =>
+        isOrderInTransit({
+          kaspiState: order.status,
+          kaspiDisposition: order.external_status,
+        }),
+      )
+    : allOrders;
 
   const activeOrders = orders.filter(
     (order) => order.external_status !== "CANCELLED",
@@ -110,14 +128,22 @@ export default async function OrdersPage() {
         <section className="table-card">
           <div className="table-heading">
             <div>
-              <h2>Лента заказов</h2>
+              <h2>{isTransitFilter ? "Заказы в пути" : "Лента заказов"}</h2>
               <p>
-                Финансовые показатели сохраняются в sales_orders
+                {isTransitFilter
+                  ? "Переданы курьеру или в процессе доставки, не отменены и не завершены"
+                  : "Финансовые показатели сохраняются в sales_orders"}
               </p>
             </div>
 
             <div className="table-actions">
               <SyncKaspiButton />
+
+              {isTransitFilter ? (
+                <Link href="/orders" className="api-link">
+                  Сбросить фильтр
+                </Link>
+              ) : null}
 
               <Link href="/api/orders" className="api-link">
                 Открыть JSON
