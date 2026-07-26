@@ -18,6 +18,7 @@ type OrderRow = {
   external_code: string | null;
   external_status: string | null;
   status: string | null;
+  courier_handover_at: string | null;
   order_date: string;
   customer_name: string | null;
   sale_amount: number | string | null;
@@ -39,13 +40,14 @@ type OrdersPageProps = {
 export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const { filter } = await searchParams;
   const isTransitFilter = filter === "transit";
+  const isNotPurchasedFilter = filter === "not_purchased";
 
   const supabase = createSupabaseAdminClient();
 
   const { data, error } = await supabase
     .from("sales_orders")
     .select(
-      "id, external_code, external_status, status, order_date, customer_name, sale_amount, delivery_type, items, purchased, supplier, purchase_price, logistics_cost, advertising_cost, profit, margin",
+      "id, external_code, external_status, status, courier_handover_at, order_date, customer_name, sale_amount, delivery_type, items, purchased, supplier, purchase_price, logistics_cost, advertising_cost, profit, margin",
     )
     .eq("sales_channel", "kaspi")
     .order("order_date", { ascending: false })
@@ -67,9 +69,15 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         isOrderInTransit({
           kaspiState: order.status,
           kaspiDisposition: order.external_status,
+          courierHandoverAt: order.courier_handover_at,
         }),
       )
-    : allOrders;
+    : isNotPurchasedFilter
+      ? allOrders.filter(
+          (order) =>
+            !order.purchased && order.external_status !== "CANCELLED",
+        )
+      : allOrders;
 
   const activeOrders = orders.filter(
     (order) => order.external_status !== "CANCELLED",
@@ -128,18 +136,26 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         <section className="table-card">
           <div className="table-heading">
             <div>
-              <h2>{isTransitFilter ? "Заказы в пути" : "Лента заказов"}</h2>
+              <h2>
+                {isTransitFilter
+                  ? "Заказы в пути"
+                  : isNotPurchasedFilter
+                    ? "Не закуплено"
+                    : "Лента заказов"}
+              </h2>
               <p>
                 {isTransitFilter
                   ? "Переданы курьеру или в процессе доставки, не отменены и не завершены"
-                  : "Финансовые показатели сохраняются в sales_orders"}
+                  : isNotPurchasedFilter
+                    ? "Требуется поставщик и закупочная цена, отменённые заказы исключены"
+                    : "Финансовые показатели сохраняются в sales_orders"}
               </p>
             </div>
 
             <div className="table-actions">
               <SyncKaspiButton />
 
-              {isTransitFilter ? (
+              {isTransitFilter || isNotPurchasedFilter ? (
                 <Link href="/orders" className="api-link">
                   Сбросить фильтр
                 </Link>

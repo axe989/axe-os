@@ -116,6 +116,7 @@ export default async function DashboardPage({
           helper="Требуется поставщик и закупочная цена"
           icon={PackageX}
           tone={data.pendingPurchaseCount > 0 ? "warning" : "positive"}
+          href="/orders?filter=not_purchased"
         />
       </section>
 

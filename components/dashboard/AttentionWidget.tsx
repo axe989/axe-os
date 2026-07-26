@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { AlertTriangle, CheckCircle2, PackageX } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { DashboardOrder } from "@/lib/dashboard/queries";
+import type { AttentionGroup, DashboardOrder } from "@/lib/dashboard/queries";
 import { formatMoney, parseOrderItems } from "@/lib/orders/format";
 
 function itemsSummary(order: DashboardOrder, maxVisible = 2) {
@@ -24,45 +25,51 @@ function itemsSummary(order: DashboardOrder, maxVisible = 2) {
   return rest > 0 ? `${visible} и ещё ${rest}` : visible;
 }
 
-type AttentionGroup = {
+type RenderGroup = {
   key: string;
   title: string;
   icon: LucideIcon;
   tone: "warning" | "danger";
-  orders: DashboardOrder[];
+  totalCount: number;
+  items: DashboardOrder[];
   metric: (order: DashboardOrder) => string;
+  /** Link to see the full list elsewhere, when the display cap truncates it. */
+  showAllHref?: string;
 };
 
 type AttentionWidgetProps = {
-  notPurchased: DashboardOrder[];
-  negativeMargin: DashboardOrder[];
+  notPurchased: AttentionGroup;
+  negativeMargin: AttentionGroup;
 };
 
 export default function AttentionWidget({
   notPurchased,
   negativeMargin,
 }: AttentionWidgetProps) {
-  const groups: AttentionGroup[] = [
+  const groups: RenderGroup[] = [
     {
       key: "not-purchased",
       title: "Не закуплено",
       icon: PackageX,
       tone: "warning",
-      orders: notPurchased,
+      totalCount: notPurchased.totalCount,
+      items: notPurchased.items,
       metric: (order) => formatMoney(order.sale_amount),
+      showAllHref: "/orders?filter=not_purchased",
     },
     {
       key: "negative-margin",
       title: "Отрицательная прибыль",
       icon: AlertTriangle,
       tone: "danger",
-      orders: negativeMargin,
+      totalCount: negativeMargin.totalCount,
+      items: negativeMargin.items,
       metric: (order) => formatMoney(order.profit),
     },
   ];
 
   const totalIssues = groups.reduce(
-    (sum, group) => sum + group.orders.length,
+    (sum, group) => sum + group.totalCount,
     0,
   );
 
@@ -80,7 +87,7 @@ export default function AttentionWidget({
       ) : (
         <div className="space-y-5">
           {groups
-            .filter((group) => group.orders.length > 0)
+            .filter((group) => group.totalCount > 0)
             .map((group) => (
               <div key={group.key}>
                 <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -95,12 +102,12 @@ export default function AttentionWidget({
                   </span>
                   {group.title}
                   <span className="text-xs font-normal text-slate-400">
-                    {group.orders.length}
+                    {group.totalCount}
                   </span>
                 </p>
 
                 <ul className="space-y-2">
-                  {group.orders.map((order) => (
+                  {group.items.map((order) => (
                     <li
                       key={`${group.key}-${order.id}`}
                       className="flex items-start justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"
@@ -120,6 +127,23 @@ export default function AttentionWidget({
                     </li>
                   ))}
                 </ul>
+
+                {group.totalCount > group.items.length ? (
+                  <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
+                    <span>
+                      Показано {group.items.length} из {group.totalCount}
+                    </span>
+
+                    {group.showAllHref ? (
+                      <Link
+                        href={group.showAllHref}
+                        className="font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        Показать все
+                      </Link>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ))}
         </div>

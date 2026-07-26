@@ -30,6 +30,10 @@ function getPersonName(person?: {
     .trim();
 }
 
+function epochMsToIso(value: number | null | undefined): string | null {
+  return typeof value === "number" ? new Date(value).toISOString() : null;
+}
+
 async function mapWithConcurrency<Item, Result>(
   items: Item[],
   limit: number,
@@ -130,6 +134,12 @@ async function mapKaspiOrder(
     recipient_name: customerName,
     customer_name: customerName,
     order_date: new Date(attributes.creationDate).toISOString(),
+    // Real handover event, not the planning/schedule field - see
+    // lib/orders/status.ts for why this distinction matters.
+    courier_handover_at: epochMsToIso(
+      attributes.kaspiDelivery?.courierTransmissionDate,
+    ),
+    planned_delivery_at: epochMsToIso(attributes.plannedDeliveryDate),
     synced_at: new Date().toISOString(),
     source_payload: order,
     items,

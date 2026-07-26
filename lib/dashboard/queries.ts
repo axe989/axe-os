@@ -12,6 +12,10 @@ export type DashboardOrder = {
   // KASPI_DELIVERY, PICKUP, ARCHIVE, ...). NOT the same axis as
   // external_status above — see lib/orders/status.ts.
   status: string | null;
+  // `sales_orders.courier_handover_at` — actual courier handoff
+  // timestamp, distinct from any planned/scheduled date. See
+  // lib/orders/status.ts.
+  courier_handover_at: string | null;
   order_date: string;
   customer_name: string | null;
   sale_amount: number | string | null;
@@ -29,8 +33,16 @@ const RECEIVED_STATUS = "COMPLETED";
 const CANCELLED_STATUS = "CANCELLED";
 
 const RECENT_ORDERS_LIMIT = 8;
-const ATTENTION_LIMIT = 5;
+// How many rows the Attention widget renders per group before it needs
+// a "show all" link. totalCount below is always the true count and must
+// never be replaced by this display cap.
+const ATTENTION_DISPLAY_LIMIT = 8;
 const ORDERS_QUERY_LIMIT = 1000;
+
+export type AttentionGroup = {
+  totalCount: number;
+  items: DashboardOrder[];
+};
 
 export type DashboardData = {
   revenue: number;
@@ -44,8 +56,8 @@ export type DashboardData = {
   averageReceivedCheck: number;
   recentOrders: DashboardOrder[];
   attention: {
-    notPurchased: DashboardOrder[];
-    negativeMargin: DashboardOrder[];
+    notPurchased: AttentionGroup;
+    negativeMargin: AttentionGroup;
   };
 };
 
@@ -61,7 +73,7 @@ export async function getDashboardData(
   const { data, error } = await supabase
     .from("sales_orders")
     .select(
-      "id, external_code, external_status, status, order_date, customer_name, sale_amount, delivery_type, items, purchased, profit, margin",
+      "id, external_code, external_status, status, courier_handover_at, order_date, customer_name, sale_amount, delivery_type, items, purchased, profit, margin",
     )
     .eq("sales_channel", "kaspi")
     .gte("order_date", range.from.toISOString())
@@ -99,6 +111,7 @@ export async function getDashboardData(
     isOrderInTransit({
       kaspiState: order.status,
       kaspiDisposition: order.external_status,
+      courierHandoverAt: order.courier_handover_at,
     }),
   );
 
@@ -136,8 +149,14 @@ export async function getDashboardData(
       averageReceivedCheck,
       recentOrders: orders.slice(0, RECENT_ORDERS_LIMIT),
       attention: {
-        notPurchased: pendingPurchaseOrders.slice(0, ATTENTION_LIMIT),
-        negativeMargin: negativeMarginOrders.slice(0, ATTENTION_LIMIT),
+        notPurchased: {
+          totalCount: pendingPurchaseOrders.length,
+          items: pendingPurchaseOrders.slice(0, ATTENTION_DISPLAY_LIMIT),
+        },
+        negativeMargin: {
+          totalCount: negativeMarginOrders.length,
+          items: negativeMarginOrders.slice(0, ATTENTION_DISPLAY_LIMIT),
+        },
       },
     },
   };

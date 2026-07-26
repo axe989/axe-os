@@ -12,6 +12,21 @@ export interface KaspiPerson {
   cellPhone?: string;
 }
 
+export interface KaspiDeliveryInfo {
+  express?: boolean;
+  waybill?: string;
+  waybillNumber?: string;
+  firstMileCourier?: string | null;
+  returnedToWarehouse?: boolean;
+  /**
+   * Actual epoch-ms timestamp the parcel was handed to the courier.
+   * null/absent until it really happens - do not confuse with
+   * courierTransmissionPlanningDate, which is only a schedule.
+   */
+  courierTransmissionDate?: number | null;
+  courierTransmissionPlanningDate?: number | null;
+}
+
 export interface KaspiOrderAttributes {
   code: string;
   totalPrice: number;
@@ -26,6 +41,8 @@ export interface KaspiOrderAttributes {
   deliveryCostForSeller?: number;
   isKaspiDelivery?: boolean;
   signatureRequired?: boolean;
+  assembled?: boolean;
+  kaspiDelivery?: KaspiDeliveryInfo;
   customer?: KaspiPerson;
   recipient?: KaspiPerson;
 }
