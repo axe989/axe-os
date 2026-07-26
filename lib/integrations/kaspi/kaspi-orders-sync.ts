@@ -1,4 +1,8 @@
-import { getAllKaspiOrdersByState } from "@/lib/integrations/kaspi/orders";
+import {
+  getAllKaspiOrdersByState,
+  getKaspiOrderEntries,
+  getKaspiOrderEntryProduct,
+} from "@/lib/integrations/kaspi/orders";
 import type {
   KaspiOrder,
   KaspiOrderState,
@@ -14,6 +18,8 @@ const KASPI_STATES: KaspiOrderState[] = [
   "ARCHIVE",
 ];
 
+const ENTRY_SYNC_CONCURRENCY = 4;
+
 function getPersonName(person?: {
   firstName?: string;
   lastName?: string;
@@ -24,7 +30,75 @@ function getPersonName(person?: {
     .trim();
 }
 
-function mapKaspiOrder(order: KaspiOrder) {
+async function mapWithConcurrency<Item, Result>(
+  items: Item[],
+  limit: number,
+  fn: (item: Item) => Promise<Result>,
+): Promise<Result[]> {
+  const results: Result[] = new Array(items.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await fn(items[index]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
+
+  return results;
+}
+
+async function getOrderItems(
+  orderId: string,
+  productNameCache: Map<string, string>,
+) {
+  try {
+    const entries = await getKaspiOrderEntries(orderId);
+
+    return await Promise.all(
+      entries.data.map(async (entry) => {
+        const productId = entry.relationships?.product?.data?.id;
+        let name = "Товар";
+
+        if (productId) {
+          const cached = productNameCache.get(productId);
+
+          if (cached) {
+            name = cached;
+          } else {
+            const product = await getKaspiOrderEntryProduct(entry.id);
+
+            name = product.data.attributes.name;
+            productNameCache.set(productId, name);
+          }
+        }
+
+        return {
+          name,
+          quantity: entry.attributes.quantity,
+          totalPrice: entry.attributes.totalPrice,
+        };
+      }),
+    );
+  } catch (error) {
+    console.error(
+      `Не удалось загрузить состав заказа ${orderId}:`,
+      error,
+    );
+
+    return [];
+  }
+}
+
+async function mapKaspiOrder(
+  order: KaspiOrder,
+  productNameCache: Map<string, string>,
+) {
   const attributes = order.attributes;
   const recipient = attributes.recipient ?? attributes.customer;
 
@@ -32,6 +106,8 @@ function mapKaspiOrder(order: KaspiOrder) {
     getPersonName(recipient) ||
     getPersonName(attributes.customer) ||
     null;
+
+  const items = await getOrderItems(order.id, productNameCache);
 
   return {
     sales_channel: "kaspi",
@@ -56,6 +132,7 @@ function mapKaspiOrder(order: KaspiOrder) {
     order_date: new Date(attributes.creationDate).toISOString(),
     synced_at: new Date().toISOString(),
     source_payload: order,
+    items,
   };
 }
 
@@ -66,6 +143,8 @@ export async function syncKaspiOrders() {
   const dateFrom = new Date();
 
   dateFrom.setDate(dateFrom.getDate() - 14);
+
+  const productNameCache = new Map<string, string>();
 
   let received = 0;
   let saved = 0;
@@ -83,7 +162,11 @@ export async function syncKaspiOrders() {
       continue;
     }
 
-    const rows = orders.map(mapKaspiOrder);
+    const rows = await mapWithConcurrency(
+      orders,
+      ENTRY_SYNC_CONCURRENCY,
+      (order) => mapKaspiOrder(order, productNameCache),
+    );
 
     const { data, error } = await supabase
       .from("sales_orders")

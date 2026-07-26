@@ -2,15 +2,15 @@ import Link from "next/link";
 import SyncKaspiButton from "./SyncKaspiButton";
 import OrderFinanceEditor from "./OrderFinanceEditor";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import {
+  formatMoney,
+  formatOrderDate,
+  formatPercent,
+  orderStatusLabel,
+  parseOrderItems,
+} from "@/lib/orders/format";
 
 export const dynamic = "force-dynamic";
-
-type OrderItem = {
-  name?: string;
-  productName?: string;
-  quantity?: number;
-  count?: number;
-};
 
 type OrderRow = {
   id: string;
@@ -29,53 +29,6 @@ type OrderRow = {
   profit: number | string | null;
   margin: number | string | null;
 };
-
-function formatMoney(value: number | string | null) {
-  const amount = Number(value ?? 0);
-
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: "KZT",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-function formatPercent(value: number | string | null) {
-  const amount = Number(value ?? 0);
-
-  return new Intl.NumberFormat("ru-RU", {
-    maximumFractionDigits: 1,
-  }).format(amount);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Almaty",
-  }).format(new Date(value));
-}
-
-function statusLabel(status: string | null) {
-  const labels: Record<string, string> = {
-    ACCEPTED_BY_MERCHANT: "Принят",
-    CANCELLED: "Отменён",
-    COMPLETED: "Завершён",
-    APPROVED_BY_BANK: "Подтверждён",
-    KASPI_DELIVERY: "Kaspi Доставка",
-    DELIVERY: "Доставка",
-    PICKUP: "Самовывоз",
-    NEW: "Новый",
-    SIGN_REQUIRED: "Требуется подпись",
-    ARCHIVE: "Архив",
-  };
-
-  return labels[status ?? ""] ?? status ?? "—";
-}
-
-function getItems(value: unknown): OrderItem[] {
-  return Array.isArray(value) ? (value as OrderItem[]) : [];
-}
 
 export default async function OrdersPage() {
   const supabase = createSupabaseAdminClient();
@@ -174,7 +127,7 @@ export default async function OrdersPage() {
 
           <div className="orders-list">
             {orders.map((order) => {
-              const items = getItems(order.items);
+              const items = parseOrderItems(order.items);
               const profit = Number(order.profit ?? 0);
               const isCancelled =
                 order.external_status === "CANCELLED";
@@ -204,12 +157,12 @@ export default async function OrdersPage() {
                                 : "status status-active"
                           }
                         >
-                          {statusLabel(order.external_status)}
+                          {orderStatusLabel(order.external_status)}
                         </span>
                       </div>
 
                       <div className="order-meta">
-                        <span>{formatDate(order.order_date)}</span>
+                        <span>{formatOrderDate(order.order_date)}</span>
 
                         <span>
                           {order.customer_name ??

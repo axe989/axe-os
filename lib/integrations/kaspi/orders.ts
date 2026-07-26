@@ -1,6 +1,8 @@
 import { kaspiRequest } from "./client";
 import type {
+  KaspiMasterProductResponse,
   KaspiOrder,
+  KaspiOrderEntriesResponse,
   KaspiOrdersResponse,
   KaspiOrderState,
 } from "./types";
@@ -77,4 +79,20 @@ export async function getAllKaspiOrdersByState(
   }
 
   return orders;
+}
+
+export async function getKaspiOrderEntries(
+  orderId: string,
+): Promise<KaspiOrderEntriesResponse> {
+  return kaspiRequest<KaspiOrderEntriesResponse>(
+    `/orders/${orderId}/entries`,
+  );
+}
+
+export async function getKaspiOrderEntryProduct(
+  orderEntryId: string,
+): Promise<KaspiMasterProductResponse> {
+  return kaspiRequest<KaspiMasterProductResponse>(
+    `/orderentries/${orderEntryId}/product`,
+  );
 }

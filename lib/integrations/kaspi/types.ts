@@ -44,3 +44,42 @@ export interface KaspiOrdersResponse {
     totalCount?: number;
   };
 }
+
+export interface KaspiOrderEntryAttributes {
+  quantity: number;
+  totalPrice: number;
+  basePrice?: number;
+}
+
+export interface KaspiOrderEntry {
+  type: "orderentries";
+  id: string;
+  attributes: KaspiOrderEntryAttributes;
+  relationships?: {
+    product?: {
+      data?: {
+        type: string;
+        id: string;
+      };
+    };
+  };
+}
+
+export interface KaspiOrderEntriesResponse {
+  data: KaspiOrderEntry[];
+  included?: unknown[];
+}
+
+export interface KaspiMasterProductAttributes {
+  code?: string;
+  name: string;
+  category?: string;
+}
+
+export interface KaspiMasterProductResponse {
+  data: {
+    type: "masterproducts";
+    id: string;
+    attributes: KaspiMasterProductAttributes;
+  };
+}

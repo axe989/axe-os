@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
-type Tone = "default" | "positive" | "negative";
+type Tone = "default" | "positive" | "negative" | "warning";
 
 type KpiCardProps = {
   label: string;
@@ -14,6 +14,7 @@ const TONE_STYLES: Record<Tone, string> = {
   default: "bg-blue-50 text-blue-600",
   positive: "bg-emerald-50 text-emerald-600",
   negative: "bg-red-50 text-red-600",
+  warning: "bg-amber-50 text-amber-600",
 };
 
 export default function KpiCard({
