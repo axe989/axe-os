@@ -12,9 +12,41 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     title: "Заказы Kaspi",
     subtitle: "Закупка, затраты и прибыль по каждому заказу",
   },
-  "/": {
+  "/catalog": {
+    title: "Каталог",
+    subtitle: "Единый каталог товаров и SKU для всех каналов продаж",
+  },
+  "/suppliers": {
     title: "Поставщики",
     subtitle: "Данные загружены непосредственно из Supabase",
+  },
+  "/procurement": {
+    title: "Закупки",
+    subtitle: "Заявки на закупку и контроль поставок",
+  },
+  "/warehouse": {
+    title: "Склад",
+    subtitle: "Остатки, приёмка и движение товаров",
+  },
+  "/logistics": {
+    title: "Логистика",
+    subtitle: "Доставка, маршруты и затраты на перевозку",
+  },
+  "/finance": {
+    title: "Финансы",
+    subtitle: "Прибыль, расходы и финансовая отчётность",
+  },
+  "/analytics": {
+    title: "Аналитика",
+    subtitle: "Динамика продаж и ключевые метрики бизнеса",
+  },
+  "/marketplace": {
+    title: "Marketplace",
+    subtitle: "Управление каналами продаж и маркетплейсами",
+  },
+  "/settings": {
+    title: "Настройки",
+    subtitle: "Параметры аккаунта, интеграций и доступа",
   },
 };
 
