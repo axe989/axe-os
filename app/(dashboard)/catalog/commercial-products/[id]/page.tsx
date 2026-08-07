@@ -59,7 +59,7 @@ export default async function CommercialProductDetailPage({ params, searchParams
     return (
       <div className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-          Коммерческий товар не найден: {error?.message}
+          Коммерческое предложение не найдено: {error?.message}
         </div>
       </div>
     );
@@ -71,13 +71,13 @@ export default async function CommercialProductDetailPage({ params, searchParams
   return (
     <div className="mx-auto w-full max-w-screen-2xl min-w-0 space-y-6 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
       <Link href={`/catalog/products/${master?.id}`} className="text-sm text-blue-700 hover:underline">
-        ← {master?.name ?? "Master Product"}
+        ← {master?.name ?? "Базовый товар"}
       </Link>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-xl font-semibold text-slate-900">{product.commercial_name}</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Commercial Product · {brand?.name ?? "Бренд не указан"}
+          Коммерческое предложение · {brand?.name ?? "Бренд не указан"}
           {master?.manufacturer_sku ? ` · ${master.manufacturer_sku}` : ""}
         </p>
 
@@ -308,14 +308,14 @@ async function PricingTab({
   return (
     <div className="space-y-8">
       <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
-        Закупочная цена наследуется от Master Product через предложения поставщиков; цена продажи — с листингов
-        этого коммерческого товара. Стоимость комплектации (услуги/аксессуары) пока не учитывается в расчёте.
+        Закупочная цена наследуется от базового товара через предложения поставщиков; цена продажи — с листингов
+        этого коммерческого предложения. Стоимость комплектации (услуги/аксессуары) пока не учитывается в расчёте.
       </div>
 
       {marginBlock}
 
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-slate-700">История цен закупки (Master Product)</h3>
+        <h3 className="mb-3 text-sm font-semibold text-slate-700">История цен закупки (базовый товар)</h3>
         {costHistory && costHistory.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="w-full text-left text-sm">

@@ -13,16 +13,20 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     subtitle: "Закупка, затраты и прибыль по каждому заказу",
   },
   "/catalog": {
-    title: "Каталог",
-    subtitle: "KPI каталога: сопоставление, отсутствующие товары, маржа",
+    title: "Товарный центр",
+    subtitle: "Что предлагают поставщики и что с этим нужно сделать дальше",
+  },
+  "/catalog/supplier-offers": {
+    title: "Предложения поставщиков",
+    subtitle: "Закупочная цена, наличие и статус по каждому предложению",
   },
   "/catalog/products": {
-    title: "Товары",
-    subtitle: "Master Product — объективные факты производителя",
+    title: "Базовые товары",
+    subtitle: "Внутренний справочник — объективные характеристики товара",
   },
   "/catalog/commercial-products": {
-    title: "Коммерческие товары",
-    subtitle: "Commercial Product — что AXE фактически продаёт",
+    title: "Коммерческие предложения",
+    subtitle: "Commercial Offer — что AXE фактически продаёт",
   },
   "/catalog/listing-strategies": {
     title: "Стратегии листингов",
@@ -37,12 +41,8 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     subtitle: "Выбор файла, листа, сопоставление столбцов и загрузка",
   },
   "/catalog/matching": {
-    title: "Сопоставление",
-    subtitle: "Проверка совпадений между поставщиками и каталогом",
-  },
-  "/catalog/missing": {
-    title: "Отсутствующие товары",
-    subtitle: "Товары поставщиков без карточки в каталоге",
+    title: "Сопоставление (расширенный режим)",
+    subtitle: "Внутренний движок сопоставления — обычно не требуется",
   },
   "/catalog/categories": {
     title: "Категории",
