@@ -77,10 +77,37 @@ export type PriceType =
 
 export type ListingStatus = "draft" | "active" | "inactive" | "archived";
 
+export type PublicationMode =
+  | "create_new_listing"
+  | "join_existing_listing"
+  | "update_existing_listing";
+
+export type PublicationStatus =
+  | "draft"
+  | "content_incomplete"
+  | "needs_review"
+  | "ready_for_export"
+  | "exported"
+  | "uploaded"
+  | "published"
+  | "publication_error"
+  | "archived";
+
+export type PublicationEventType =
+  | "status_change"
+  | "export"
+  | "upload_confirmed"
+  | "reconciliation_match"
+  | "reconciliation_ambiguous"
+  | "validation_failed";
+
+export type MediaRole = "primary_image" | "gallery" | "infographic";
+
 export type ProductBrand = {
   id: string;
   name: string;
   normalized_name: string;
+  short_code: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -133,6 +160,7 @@ export type ProductMaster = {
   series: string | null;
   product_type: string | null;
   technical_attributes: Record<string, unknown>;
+  default_media_set_id: string | null;
   unit: string;
   is_active: boolean;
   created_at: string;
@@ -145,15 +173,29 @@ export type CommercialProduct = {
   id: string;
   master_product_id: string;
   commercial_name: string;
-  bundle_components: Record<string, unknown>;
+  bundle_code: string | null;
+  bundle_components: BundleComponent[];
   status: ProductWorkflowStatus;
   assortment_status: AssortmentStatus;
   content_status: string;
   publication_readiness: string;
   pricing_strategy_id: string | null;
   preferred_supplier_id: string | null;
+  media_set_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// One line of a Commercial Product's bundle definition. dictionary_value_id
+// points into attribute_dictionary_values for dictionary_code='equipment'
+// (base radiator / bracket kit / connection kit / air vent valve / ...).
+// Equipment is never hand-typed on a publication item -- it is always
+// derived from this list at preview/export time (see
+// lib/catalog/publication/resolve-equipment.ts).
+export type BundleComponent = {
+  dictionary_value_id: string;
+  quantity: number;
+  source_supplier_offer_id?: string | null;
 };
 
 export type SupplierOffer = {
@@ -315,4 +357,167 @@ export type PricingStrategy = {
   is_active: boolean;
   valid_from: string;
   valid_to: string | null;
+};
+
+// --- Media Library -----------------------------------------------------
+// Reusable image/video assets, independent of any single product. Never
+// owned directly by product_master/commercial_products/content variants --
+// those reference a media_sets row (or inherit one, see MediaResolution
+// below), never duplicate the underlying asset.
+
+export type MediaAsset = {
+  id: string;
+  storage_path: string;
+  media_type: "image" | "video" | "document";
+  checksum: string | null;
+  alt_text: string | null;
+  width: number | null;
+  height: number | null;
+  created_at: string;
+};
+
+export type MediaSet = {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MediaSetItem = {
+  id: string;
+  media_set_id: string;
+  media_asset_id: string;
+  role: MediaRole;
+  sort_order: number;
+  created_at: string;
+};
+
+// --- Attribute dictionaries ---------------------------------------------
+// Canonical internal code + human-readable display label, kept separate
+// from any channel's translated value. product_master.technical_attributes
+// and CommercialProduct.bundle_components store only the canonical code
+// (`${dictionary_code}.${value_code}`); translation happens per-channel
+// at publish/preview time.
+
+export type AttributeDictionary = {
+  dictionary_code: string;
+  name: string;
+  created_at: string;
+};
+
+export type AttributeDictionaryValue = {
+  id: string;
+  dictionary_code: string;
+  value_code: string;
+  display_label: string;
+  created_at: string;
+};
+
+export type AttributeChannelTranslation = {
+  id: string;
+  attribute_dictionary_value_id: string;
+  sales_channel: string;
+  category_id: string | null;
+  translated_value: string;
+  translated_label: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// --- Kaspi Publication Pipeline -----------------------------------------
+
+// Level: how a Commercial Product is presented to a channel/positioning
+// angle. Many variants may reference the same Commercial Product;
+// sales_channel is nullable (a channel-agnostic variant is reused by any
+// channel that doesn't need its own override).
+export type MarketplaceContentVariant = {
+  id: string;
+  commercial_product_id: string;
+  sales_channel: string | null;
+  title: string;
+  description: string | null;
+  media_set_id: string | null;
+  seo_strategy: Record<string, unknown>;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MarketplacePublicationBatch = {
+  id: string;
+  sales_channel: string;
+  adapter: string;
+  template_version: string | null;
+  file_name: string | null;
+  file_hash: string | null;
+  row_count: number;
+  exported_by: string | null;
+  exported_at: string | null;
+  created_at: string;
+};
+
+// Immutable, written exactly once at export time -- see
+// lib/catalog/publication/build-export-snapshot.ts. Historical exports
+// stay reproducible even after the product/pricing/content/media change.
+export type PublicationExportSnapshot = {
+  schema_version: 1;
+  captured_at: string;
+  commercial_product: { id: string; commercial_name: string; bundle_code: string | null };
+  content_variant: { id: string; sales_channel: string | null; title: string; description: string | null };
+  merchant_sku: string;
+  attributes: Array<{
+    dictionary_code: string;
+    value_code: string;
+    display_label: string;
+    translated_value: string;
+  }>;
+  equipment: Array<{
+    value_code: string;
+    display_label: string;
+    translated_value: string;
+    quantity: number;
+  }>;
+  media: {
+    resolved_from: "content_variant" | "commercial_product" | "master_product";
+    media_set_id: string;
+    items: Array<{
+      media_asset_id: string;
+      role: MediaRole;
+      sort_order: number;
+      storage_path: string;
+      checksum: string | null;
+    }>;
+  } | null;
+  adapter: string;
+  template_version: string | null;
+  exported_row: Record<string, string>;
+};
+
+export type MarketplacePublicationItem = {
+  id: string;
+  batch_id: string | null;
+  commercial_product_id: string;
+  content_variant_id: string;
+  marketplace_listing_id: string | null;
+  sales_channel: string;
+  publication_mode: PublicationMode;
+  seller_sku: string | null;
+  status: PublicationStatus;
+  validation_errors: string[];
+  export_snapshot: PublicationExportSnapshot | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MarketplacePublicationEvent = {
+  id: string;
+  publication_item_id: string;
+  event_type: PublicationEventType;
+  from_status: string | null;
+  to_status: string | null;
+  payload: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
 };
