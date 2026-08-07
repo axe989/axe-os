@@ -2,20 +2,23 @@ import Link from "next/link";
 import SyncKaspiButton from "./SyncKaspiButton";
 import OrderFinanceEditor from "./OrderFinanceEditor";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { isOrderInTransit } from "@/lib/orders/status";
+import {
+  formatMoney,
+  formatOrderDate,
+  formatPercent,
+  orderStatusLabel,
+  parseOrderItems,
+} from "@/lib/orders/format";
 
 export const dynamic = "force-dynamic";
-
-type OrderItem = {
-  name?: string;
-  productName?: string;
-  quantity?: number;
-  count?: number;
-};
 
 type OrderRow = {
   id: string;
   external_code: string | null;
   external_status: string | null;
+  status: string | null;
+  courier_handover_at: string | null;
   order_date: string;
   customer_name: string | null;
   sale_amount: number | string | null;
@@ -30,60 +33,21 @@ type OrderRow = {
   margin: number | string | null;
 };
 
-function formatMoney(value: number | string | null) {
-  const amount = Number(value ?? 0);
+type OrdersPageProps = {
+  searchParams: Promise<{ filter?: string }>;
+};
 
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: "KZT",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+export default async function OrdersPage({ searchParams }: OrdersPageProps) {
+  const { filter } = await searchParams;
+  const isTransitFilter = filter === "transit";
+  const isNotPurchasedFilter = filter === "not_purchased";
 
-function formatPercent(value: number | string | null) {
-  const amount = Number(value ?? 0);
-
-  return new Intl.NumberFormat("ru-RU", {
-    maximumFractionDigits: 1,
-  }).format(amount);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Almaty",
-  }).format(new Date(value));
-}
-
-function statusLabel(status: string | null) {
-  const labels: Record<string, string> = {
-    ACCEPTED_BY_MERCHANT: "Принят",
-    CANCELLED: "Отменён",
-    COMPLETED: "Завершён",
-    APPROVED_BY_BANK: "Подтверждён",
-    KASPI_DELIVERY: "Kaspi Доставка",
-    DELIVERY: "Доставка",
-    PICKUP: "Самовывоз",
-    NEW: "Новый",
-    SIGN_REQUIRED: "Требуется подпись",
-    ARCHIVE: "Архив",
-  };
-
-  return labels[status ?? ""] ?? status ?? "—";
-}
-
-function getItems(value: unknown): OrderItem[] {
-  return Array.isArray(value) ? (value as OrderItem[]) : [];
-}
-
-export default async function OrdersPage() {
   const supabase = createSupabaseAdminClient();
 
   const { data, error } = await supabase
     .from("sales_orders")
     .select(
-      "id, external_code, external_status, order_date, customer_name, sale_amount, delivery_type, items, purchased, supplier, purchase_price, logistics_cost, advertising_cost, profit, margin",
+      "id, external_code, external_status, status, courier_handover_at, order_date, customer_name, sale_amount, delivery_type, items, purchased, supplier, purchase_price, logistics_cost, advertising_cost, profit, margin",
     )
     .eq("sales_channel", "kaspi")
     .order("order_date", { ascending: false })
@@ -98,7 +62,22 @@ export default async function OrdersPage() {
     );
   }
 
-  const orders = (data ?? []) as unknown as OrderRow[];
+  const allOrders = (data ?? []) as unknown as OrderRow[];
+
+  const orders = isTransitFilter
+    ? allOrders.filter((order) =>
+        isOrderInTransit({
+          kaspiState: order.status,
+          kaspiDisposition: order.external_status,
+          courierHandoverAt: order.courier_handover_at,
+        }),
+      )
+    : isNotPurchasedFilter
+      ? allOrders.filter(
+          (order) =>
+            !order.purchased && order.external_status !== "CANCELLED",
+        )
+      : allOrders;
 
   const activeOrders = orders.filter(
     (order) => order.external_status !== "CANCELLED",
@@ -127,18 +106,6 @@ export default async function OrdersPage() {
   return (
     <main className="orders-page">
       <div className="orders-shell">
-        <header className="orders-header">
-          <div>
-            <div className="brand">AXE ENGINEERING</div>
-            <h1>Заказы Kaspi</h1>
-            <p>Закупка, затраты и прибыль по каждому заказу</p>
-          </div>
-
-          <Link href="/" className="back-link">
-            Поставщики
-          </Link>
-        </header>
-
         <section className="metrics orders-metrics">
           <article className="metric-card">
             <span>Заказы</span>
@@ -169,14 +136,30 @@ export default async function OrdersPage() {
         <section className="table-card">
           <div className="table-heading">
             <div>
-              <h2>Лента заказов</h2>
+              <h2>
+                {isTransitFilter
+                  ? "Заказы в пути"
+                  : isNotPurchasedFilter
+                    ? "Не закуплено"
+                    : "Лента заказов"}
+              </h2>
               <p>
-                Финансовые показатели сохраняются в sales_orders
+                {isTransitFilter
+                  ? "Переданы курьеру или в процессе доставки, не отменены и не завершены"
+                  : isNotPurchasedFilter
+                    ? "Требуется поставщик и закупочная цена, отменённые заказы исключены"
+                    : "Финансовые показатели сохраняются в sales_orders"}
               </p>
             </div>
 
             <div className="table-actions">
               <SyncKaspiButton />
+
+              {isTransitFilter || isNotPurchasedFilter ? (
+                <Link href="/orders" className="api-link">
+                  Сбросить фильтр
+                </Link>
+              ) : null}
 
               <Link href="/api/orders" className="api-link">
                 Открыть JSON
@@ -186,7 +169,7 @@ export default async function OrdersPage() {
 
           <div className="orders-list">
             {orders.map((order) => {
-              const items = getItems(order.items);
+              const items = parseOrderItems(order.items);
               const profit = Number(order.profit ?? 0);
               const isCancelled =
                 order.external_status === "CANCELLED";
@@ -216,12 +199,12 @@ export default async function OrdersPage() {
                                 : "status status-active"
                           }
                         >
-                          {statusLabel(order.external_status)}
+                          {orderStatusLabel(order.external_status)}
                         </span>
                       </div>
 
                       <div className="order-meta">
-                        <span>{formatDate(order.order_date)}</span>
+                        <span>{formatOrderDate(order.order_date)}</span>
 
                         <span>
                           {order.customer_name ??
