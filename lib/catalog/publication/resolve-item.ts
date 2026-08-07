@@ -169,7 +169,14 @@ export async function resolvePublicationItem(
     imageCode = mediaResolution.mediaSetId;
   }
 
-  const bundleComponents = (commercialProduct.bundle_components ?? []) as BundleComponent[];
+  // Defensive: rows created before bundle_components became an array
+  // (or written by some other future path) may still carry the old
+  // '{}'::jsonb object default -- never let a shape mismatch throw here,
+  // just treat it as an empty bundle (the validation engine already
+  // reports that as a real, visible error).
+  const bundleComponents = Array.isArray(commercialProduct.bundle_components)
+    ? (commercialProduct.bundle_components as BundleComponent[])
+    : [];
   const resolvedEquipment = resolveEquipmentFromBundle(
     bundleComponents,
     salesChannel,

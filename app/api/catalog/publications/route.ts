@@ -42,6 +42,20 @@ export async function POST(request: Request) {
 
     const salesChannel = body.salesChannel || "kaspi";
 
+    // Resolve+validate BEFORE inserting -- a brand-new item has no id yet
+    // to exclude from the duplicate-SKU check, which is fine (there's
+    // nothing to collide with itself). This keeps row creation to a
+    // single insert with the final status/seller_sku already known,
+    // instead of insert-then-update, which used to leave an orphaned
+    // "draft" row behind if resolution threw partway through.
+    const resolved = await resolvePublicationItem(supabase, {
+      commercialProductId: body.commercialProductId,
+      contentVariantId: body.contentVariantId,
+      salesChannel,
+    });
+
+    const status = deriveWorkflowStatus(resolved.validationErrors);
+
     const { data: item, error } = await supabase
       .from("marketplace_publication_items")
       .insert({
@@ -50,7 +64,9 @@ export async function POST(request: Request) {
         publication_mode: body.publicationMode,
         marketplace_listing_id: body.marketplaceListingId || null,
         sales_channel: salesChannel,
-        status: "draft",
+        seller_sku: resolved.sellerSku,
+        status,
+        validation_errors: resolved.validationErrors,
       })
       .select("id")
       .single();
@@ -59,29 +75,10 @@ export async function POST(request: Request) {
       throw new Error(error?.message ?? "Не удалось создать позицию публикации");
     }
 
-    const resolved = await resolvePublicationItem(supabase, {
-      commercialProductId: body.commercialProductId,
-      contentVariantId: body.contentVariantId,
-      salesChannel,
-      publicationItemIdToExclude: item.id as string,
-    });
-
-    const status = deriveWorkflowStatus(resolved.validationErrors);
-
-    await supabase
-      .from("marketplace_publication_items")
-      .update({
-        seller_sku: resolved.sellerSku,
-        status,
-        validation_errors: resolved.validationErrors,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", item.id);
-
     await supabase.from("marketplace_publication_events").insert({
       publication_item_id: item.id,
       event_type: "status_change",
-      from_status: "draft",
+      from_status: null,
       to_status: status,
       payload: { validation_error_count: resolved.validationErrors.length },
     });
