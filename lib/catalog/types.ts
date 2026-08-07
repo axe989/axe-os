@@ -122,6 +122,7 @@ export type ProductCategory = {
   title_template: string | null;
   content_template: Record<string, unknown> | null;
   pricing_strategy_id: string | null;
+  required_document_types: string[];
   created_at: string;
   updated_at: string;
 };
@@ -520,4 +521,82 @@ export type MarketplacePublicationEvent = {
   payload: Record<string, unknown>;
   created_by: string | null;
   created_at: string;
+};
+
+// --- Product Readiness Engine --------------------------------------------
+// Channel-agnostic "how close is this Commercial Product to being
+// publishable anywhere" view, computed on demand (never persisted) on top
+// of the same dictionaries/media-inheritance/bundle logic the Kaspi
+// validation engine uses -- see lib/catalog/readiness/. Supersedes the
+// dead commercial_products.content_status/publication_readiness columns,
+// which were never actually computed by any code path.
+
+export type ProductDocument = {
+  id: string;
+  commercial_product_id: string;
+  document_type: string;
+  status: "required" | "uploaded" | "verified" | "not_applicable";
+  file_reference: string | null;
+  uploaded_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ReadinessDimensionKey =
+  | "supplier"
+  | "pricing"
+  | "media"
+  | "technical_specs"
+  | "content"
+  | "marketplace_attributes"
+  | "seo"
+  | "bundle"
+  | "documentation";
+
+// Which internal team actually owns closing this gap -- the whole point
+// is that a business user reading this never sees a validation code, they
+// see who to go ask.
+export type ResponsibleTeam =
+  | "procurement"
+  | "pricing"
+  | "photography"
+  | "catalog"
+  | "content"
+  | "marketing"
+  | "merchandising"
+  | "compliance";
+
+export type ReadinessIssue = {
+  message: string;
+  team: ResponsibleTeam;
+  severity: "blocking" | "recommended";
+};
+
+export type ReadinessDimensionStatus = "complete" | "partial" | "missing";
+
+export type ReadinessDimensionResult = {
+  dimension: ReadinessDimensionKey;
+  score: number;
+  status: ReadinessDimensionStatus;
+  issues: ReadinessIssue[];
+};
+
+export type ReadinessLabel =
+  | "ready_for_publication"
+  | "needs_content"
+  | "needs_images"
+  | "needs_technical_data"
+  | "needs_pricing"
+  | "needs_supplier"
+  | "needs_marketplace_attributes"
+  | "needs_seo"
+  | "needs_bundle"
+  | "needs_documentation"
+  | "draft";
+
+export type ProductReadiness = {
+  overallScore: number;
+  label: ReadinessLabel;
+  dimensions: ReadinessDimensionResult[];
+  blockingIssueCount: number;
 };

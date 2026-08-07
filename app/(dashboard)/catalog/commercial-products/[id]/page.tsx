@@ -7,6 +7,13 @@ import {
   calculateRecommendedSalePrice,
   classifyMarginStatus,
 } from "@/lib/catalog/pricing/margin";
+import { resolveProductReadiness } from "@/lib/catalog/readiness/resolve-readiness";
+import {
+  READINESS_DIMENSION_LABELS,
+  READINESS_LABEL_TEXT,
+  RESPONSIBLE_TEAM_LABELS,
+} from "@/lib/catalog/readiness/labels";
+import type { BundleComponent, ProductReadiness, ReadinessDimensionStatus } from "@/lib/catalog/types";
 import CommercialProductStatusForm from "./CommercialProductStatusForm";
 import ListingStrategyAssign from "./ListingStrategyAssign";
 
@@ -67,12 +74,15 @@ export default async function CommercialProductDetailPage({ params, searchParams
 
   const master = Array.isArray(product.product_master) ? product.product_master[0] : product.product_master;
   const brand = master ? (Array.isArray(master.product_brands) ? master.product_brands[0] : master.product_brands) : null;
+  const readiness = await resolveProductReadiness(supabase, { commercialProductId: id });
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl min-w-0 space-y-6 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
       <Link href={`/catalog/products/${master?.id}`} className="text-sm text-blue-700 hover:underline">
         ← {master?.name ?? "Базовый товар"}
       </Link>
+
+      <ReadinessSummary readiness={readiness} />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-xl font-semibold text-slate-900">{product.commercial_name}</h1>
@@ -114,22 +124,133 @@ export default async function CommercialProductDetailPage({ params, searchParams
   );
 }
 
+function readinessScoreClassName(score: number) {
+  if (score >= 100) return "text-emerald-600";
+  if (score >= 60) return "text-amber-500";
+  return "text-red-500";
+}
+
+function readinessLabelClassName(score: number) {
+  if (score >= 100) return "bg-emerald-50 text-emerald-700";
+  if (score >= 60) return "bg-amber-50 text-amber-700";
+  return "bg-red-50 text-red-700";
+}
+
+function dimensionStatusClassName(status: ReadinessDimensionStatus) {
+  if (status === "complete") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (status === "partial") return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-red-50 text-red-700 border-red-200";
+}
+
+// The headline "how close is this to publication" view -- computed fresh
+// on every page load (never persisted, see resolve-readiness.ts), built
+// on top of the same validation engine the Kaspi publication pipeline
+// uses, but reorganized into business-readable dimensions and team
+// ownership instead of internal validation codes.
+function ReadinessSummary({ readiness }: { readiness: ProductReadiness }) {
+  const blockingIssues = readiness.dimensions.flatMap((d) =>
+    d.issues.filter((issue) => issue.severity === "blocking").map((issue) => ({ ...issue, dimension: d.dimension })),
+  );
+  const recommendedIssues = readiness.dimensions.flatMap((d) =>
+    d.issues.filter((issue) => issue.severity === "recommended").map((issue) => ({ ...issue, dimension: d.dimension })),
+  );
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Готовность к публикации</h2>
+          <p className="mt-1 text-xs text-slate-400">Насколько товар готов к публикации и почему — считается автоматически</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className={`text-3xl font-bold ${readinessScoreClassName(readiness.overallScore)}`}>
+            {readiness.overallScore}%
+          </span>
+          <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${readinessLabelClassName(readiness.overallScore)}`}>
+            {READINESS_LABEL_TEXT[readiness.label]}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-9">
+        {readiness.dimensions.map((dimension) => (
+          <div
+            key={dimension.dimension}
+            className={`rounded-xl border px-3 py-2 text-center ${dimensionStatusClassName(dimension.status)}`}
+          >
+            <div className="text-xs font-medium">{READINESS_DIMENSION_LABELS[dimension.dimension]}</div>
+            <div className="mt-1 text-lg font-bold">{dimension.score}%</div>
+          </div>
+        ))}
+      </div>
+
+      {blockingIssues.length > 0 ? (
+        <div className="mt-5">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-600">
+            Блокирует публикацию ({blockingIssues.length})
+          </h3>
+          <ul className="space-y-1.5">
+            {blockingIssues.map((issue, i) => (
+              <li key={i} className="flex items-start justify-between gap-3 rounded-lg bg-red-50 px-3 py-2 text-sm">
+                <span className="text-red-800">{issue.message}</span>
+                <span className="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-xs font-medium text-red-700">
+                  {RESPONSIBLE_TEAM_LABELS[issue.team]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="mt-5 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+          Нет блокирующих проблем — товар можно публиковать.
+        </p>
+      )}
+
+      {recommendedIssues.length > 0 ? (
+        <div className="mt-3">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Рекомендуется ({recommendedIssues.length})
+          </h3>
+          <ul className="space-y-1.5">
+            {recommendedIssues.map((issue, i) => (
+              <li key={i} className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                <span className="text-slate-700">{issue.message}</span>
+                <span className="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-600">
+                  {RESPONSIBLE_TEAM_LABELS[issue.team]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function GeneralTab({ product }: { product: any }) {
-  const bundle = (product.bundle_components ?? {}) as Record<string, unknown>;
-  const bundleEntries = Object.entries(bundle).filter(([, v]) => v !== null && v !== undefined && v !== "");
+async function GeneralTab({ product }: { product: any }) {
+  const bundleComponents = (Array.isArray(product.bundle_components) ? product.bundle_components : []) as BundleComponent[];
+
+  let bundleLines: { label: string; quantity: number }[] = [];
+  if (bundleComponents.length > 0) {
+    const supabase = createSupabaseAdminClient();
+    const { data: dictionaryValues } = await supabase
+      .from("attribute_dictionary_values")
+      .select("id, display_label")
+      .in(
+        "id",
+        bundleComponents.map((c) => c.dictionary_value_id),
+      );
+    const labelById = new Map((dictionaryValues ?? []).map((v) => [v.id as string, v.display_label as string]));
+    bundleLines = bundleComponents.map((c) => ({
+      label: labelById.get(c.dictionary_value_id) ?? c.dictionary_value_id,
+      quantity: c.quantity,
+    }));
+  }
 
   return (
     <div className="space-y-6">
       <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-        <div>
-          <dt className="text-slate-500">Статус контента</dt>
-          <dd className="font-medium text-slate-900">{product.content_status}</dd>
-        </div>
-        <div>
-          <dt className="text-slate-500">Готовность публикации</dt>
-          <dd className="font-medium text-slate-900">{product.publication_readiness}</dd>
-        </div>
         <div>
           <dt className="text-slate-500">Создан</dt>
           <dd className="font-medium text-slate-900">{formatDate(product.created_at)}</dd>
@@ -139,15 +260,18 @@ function GeneralTab({ product }: { product: any }) {
           <dd className="font-medium text-slate-900">{formatDate(product.updated_at)}</dd>
         </div>
       </dl>
+      <p className="text-xs text-slate-400">
+        Готовность к публикации теперь считается автоматически — см. блок «Готовность к публикации» выше.
+      </p>
 
       <div>
         <h3 className="mb-3 text-sm font-semibold text-slate-700">Состав / комплектация</h3>
-        {bundleEntries.length > 0 ? (
+        {bundleLines.length > 0 ? (
           <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-            {bundleEntries.map(([key, value]) => (
-              <div key={key}>
-                <dt className="text-slate-500">{key}</dt>
-                <dd className="font-medium text-slate-900">{String(value)}</dd>
+            {bundleLines.map((line, i) => (
+              <div key={i}>
+                <dt className="text-slate-500">{line.label}</dt>
+                <dd className="font-medium text-slate-900">× {line.quantity}</dd>
               </div>
             ))}
           </dl>
