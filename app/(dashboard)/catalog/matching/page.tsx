@@ -17,8 +17,8 @@ const STATUS_FILTERS = [
 ];
 
 const ENTITY_TABS = [
-  { value: "supplier", label: "Поставщики → Master Product" },
-  { value: "listing", label: "Kaspi листинги → Commercial Product" },
+  { value: "supplier", label: "Поставщики → Базовый товар" },
+  { value: "listing", label: "Kaspi листинги → Коммерческое предложение" },
 ];
 
 function statusClassName(status: string) {
@@ -48,9 +48,10 @@ export default async function CatalogMatchingPage({ searchParams }: PageProps) {
       <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-semibold text-slate-900">Сопоставление</h2>
+            <h2 className="text-2xl font-semibold text-slate-900">Сопоставление (расширенный режим)</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Уровень 1→1: поставщики к Master Product · Уровень 3→2: листинги маркетплейсов к Commercial Product
+              Внутренний движок сопоставления — обычно не требуется. Уровень 1→1: поставщики к базовому товару ·
+              Уровень 3→2: листинги маркетплейсов к коммерческому предложению
             </p>
           </div>
           {entity === "supplier" ? <BulkConfirmButton /> : <ListingBulkConfirmButton />}
@@ -136,7 +137,7 @@ async function SupplierMatchTable({ statusFilter }: { statusFilter?: string }) {
         <thead className="bg-slate-100 text-slate-600">
           <tr>
             <th className="px-3 py-2 font-medium">Предложение поставщика</th>
-            <th className="px-3 py-2 font-medium">Master Product</th>
+            <th className="px-3 py-2 font-medium">Базовый товар</th>
             <th className="px-3 py-2 font-medium">Статус</th>
             <th className="px-3 py-2 font-medium">Метод / уверенность</th>
             <th className="px-3 py-2 font-medium">Обоснование</th>
@@ -229,7 +230,7 @@ async function ListingMatchTable({ statusFilter }: { statusFilter?: string }) {
         <thead className="bg-slate-100 text-slate-600">
           <tr>
             <th className="px-3 py-2 font-medium">Листинг маркетплейса</th>
-            <th className="px-3 py-2 font-medium">Commercial Product</th>
+            <th className="px-3 py-2 font-medium">Коммерческое предложение</th>
             <th className="px-3 py-2 font-medium">Статус</th>
             <th className="px-3 py-2 font-medium">Метод / уверенность</th>
             <th className="px-3 py-2 font-medium">Обоснование</th>

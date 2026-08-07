@@ -3,11 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function MissingRowActions({
+// Assortment Decision step of the lifecycle (Supplier Offer -> Assortment
+// Decision -> Base Product). Reuses the existing supplier_offer ->
+// product_master creation path (createMasterProductFromSupplierOffer);
+// only the labeling/framing is new.
+export default function AssortmentDecisionActions({
   matchId,
   supplierOfferId,
 }: {
-  matchId: string;
+  matchId: string | null;
   supplierOfferId: string;
 }) {
   const router = useRouter();
@@ -33,7 +37,7 @@ export default function MissingRowActions({
       });
       const result = (await response.json()) as { success: boolean; error?: string };
       if (!result.success) {
-        alert(result.error ?? "Не удалось создать товар");
+        alert(result.error ?? "Не удалось создать базовый товар");
         return;
       }
       router.refresh();
@@ -42,7 +46,8 @@ export default function MissingRowActions({
     }
   }
 
-  async function ignoreMatch() {
+  async function exclude() {
+    if (!matchId) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/catalog/matches/${matchId}`, {
@@ -69,7 +74,7 @@ export default function MissingRowActions({
         onClick={() => createProduct("candidate")}
         className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
       >
-        Создать товар
+        Создать базовый товар
       </button>
       <button
         type="button"
@@ -81,8 +86,8 @@ export default function MissingRowActions({
       </button>
       <button
         type="button"
-        disabled={busy}
-        onClick={ignoreMatch}
+        disabled={busy || !matchId}
+        onClick={exclude}
         className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
       >
         Исключить

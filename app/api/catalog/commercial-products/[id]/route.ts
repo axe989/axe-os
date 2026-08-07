@@ -31,7 +31,7 @@ export async function PATCH(
 
     if (readError || !current) {
       return NextResponse.json(
-        { success: false, error: readError?.message ?? "Коммерческий товар не найден" },
+        { success: false, error: readError?.message ?? "Коммерческое предложение не найдено" },
         { status: 404 },
       );
     }

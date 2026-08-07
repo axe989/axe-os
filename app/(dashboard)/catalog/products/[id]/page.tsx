@@ -8,7 +8,7 @@ const TABS = [
   { key: "general", label: "Общее" },
   { key: "attributes", label: "Характеристики" },
   { key: "suppliers", label: "Поставщики" },
-  { key: "commercial", label: "Коммерческие товары" },
+  { key: "commercial", label: "Коммерческие предложения" },
 ];
 
 const ASSORTMENT_LABELS: Record<string, string> = {
@@ -79,7 +79,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-xl font-semibold text-slate-900">{product.name}</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Master Product (объективные факты производителя) · {brand?.name ?? "Бренд не указан"}{" "}
+          Базовый товар (объективные факты производителя) · {brand?.name ?? "Бренд не указан"}{" "}
           {category?.name ? `· ${category.name}` : ""}
           {product.manufacturer_sku ? ` · ${product.manufacturer_sku}` : ""}
         </p>

@@ -20,7 +20,7 @@ import {
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/orders", label: "Заказы", icon: ShoppingCart },
-  { href: "/catalog", label: "Каталог", icon: Boxes },
+  { href: "/catalog", label: "Товарный центр", icon: Boxes },
   { href: "/suppliers", label: "Поставщики", icon: Users },
   { href: "/procurement", label: "Закупки", icon: ClipboardList },
   { href: "/warehouse", label: "Склад", icon: Warehouse },

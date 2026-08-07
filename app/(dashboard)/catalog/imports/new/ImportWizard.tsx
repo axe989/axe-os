@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Supplier = { id: string; name: string };
 
@@ -418,18 +419,18 @@ export default function ImportWizard({ suppliers }: { suppliers: Supplier[] }) {
           ) : null}
 
           <div className="mt-6 flex gap-3">
-            <a
+            <Link
               href={`/catalog/imports/${summary.importId}`}
               className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
               Открыть детали импорта
-            </a>
-            <a
-              href="/catalog/missing"
+            </Link>
+            <Link
+              href="/catalog/supplier-offers"
               className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
-              Отсутствующие товары
-            </a>
+              Предложения поставщиков
+            </Link>
           </div>
         </section>
       ) : null}

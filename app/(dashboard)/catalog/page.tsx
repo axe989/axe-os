@@ -2,30 +2,45 @@ import Link from "next/link";
 import {
   AlertTriangle,
   Boxes,
-  GitCompare,
-  HelpCircle,
+  CheckCircle2,
+  ClipboardList,
   Layers,
-  PackageSearch,
-  ShieldAlert,
+  PackagePlus,
+  ShoppingBag,
+  Sparkles,
   Store,
   TrendingDown,
-  TrendingUp,
 } from "lucide-react";
 import KpiCard from "@/components/dashboard/KpiCard";
 import { getCatalogDashboardData } from "@/lib/catalog/queries/dashboard";
+import { getSupplierOfferHomeCounts, listSupplierOffers } from "@/lib/catalog/queries/supplier-offers";
+import { SUPPLIER_OFFER_STATUS_LABELS } from "@/lib/catalog/status/supplier-offer-status";
 
 export const dynamic = "force-dynamic";
 
-export default async function CatalogDashboardPage() {
-  const data = await getCatalogDashboardData();
+function formatMoney(value: number | null) {
+  if (value === null) return "—";
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " ₸";
+}
+
+export default async function ProductCenterHomePage() {
+  const [funnel, reference, needsAttention] = await Promise.all([
+    getSupplierOfferHomeCounts(),
+    getCatalogDashboardData(),
+    listSupplierOffers(),
+  ]);
+
+  const attentionPreview = needsAttention
+    .filter((o) => o.status !== "linked" && o.status !== "excluded")
+    .slice(0, 8);
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl min-w-0 space-y-6 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Каталог</h1>
+          <h1 className="text-xl font-semibold text-slate-900">Товарный центр</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Пилот: панельные радиаторы Royal Thermo
+            Что предлагают поставщики и что с этим нужно сделать дальше
           </p>
         </div>
 
@@ -37,157 +52,213 @@ export default async function CatalogDashboardPage() {
             Новый импорт
           </Link>
           <Link
-            href="/catalog/missing"
+            href="/catalog/supplier-offers"
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Отсутствующие товары
+            Все предложения поставщиков
           </Link>
         </div>
       </div>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          label="Master Product"
-          value={String(data.productMasterCount)}
-          icon={Boxes}
-          href="/catalog/products"
+          label="Всего предложений поставщиков"
+          value={String(funnel.total)}
+          icon={ShoppingBag}
+          href="/catalog/supplier-offers"
         />
         <KpiCard
-          label="Commercial Product"
-          value={String(data.commercialProductCount)}
-          icon={Layers}
-          href="/catalog/products"
+          label="Новые (14 дней)"
+          value={String(funnel.newCount)}
+          icon={Sparkles}
+          href="/catalog/supplier-offers?new=1"
         />
         <KpiCard
-          label="Листингов маркетплейсов"
-          value={String(data.marketplaceListingCount)}
+          label={SUPPLIER_OFFER_STATUS_LABELS.needs_base_product}
+          value={String(funnel.needsBaseProduct)}
+          icon={AlertTriangle}
+          tone="warning"
+          href="/catalog/supplier-offers?status=needs_base_product"
+        />
+        <KpiCard
+          label="Уже есть базовый товар"
+          value={String(funnel.hasBaseProduct)}
+          icon={CheckCircle2}
+          tone="positive"
+          href="/catalog/supplier-offers"
+        />
+        <KpiCard
+          label="Уже на маркетплейсах"
+          value={String(funnel.linked)}
           icon={Store}
-          href="/catalog/imports"
-        />
-        <KpiCard
-          label="Позиций от поставщиков"
-          value={String(data.supplierOfferCount)}
-          icon={PackageSearch}
-          href="/catalog/imports"
-        />
-        <KpiCard
-          label="Поставщики сопоставлены"
-          value={String(data.matchedCount)}
-          icon={GitCompare}
           tone="positive"
-          href="/catalog/matching?status=matched"
+          href="/catalog/supplier-offers?status=linked"
         />
         <KpiCard
-          label="Вероятные совпадения (поставщики)"
-          value={String(data.probableCount)}
-          icon={HelpCircle}
+          label={SUPPLIER_OFFER_STATUS_LABELS.needs_marketplace_listing}
+          value={String(funnel.needsMarketplaceListing)}
+          icon={PackagePlus}
           tone="warning"
-          href="/catalog/matching?status=probable&entity=supplier"
+          href="/catalog/supplier-offers?status=needs_marketplace_listing"
         />
         <KpiCard
-          label="Отсутствуют Master Product"
-          value={String(data.missingCount)}
-          icon={AlertTriangle}
+          label={SUPPLIER_OFFER_STATUS_LABELS.needs_commercial_offer}
+          value={String(funnel.needsCommercialOffer)}
+          icon={Layers}
           tone="warning"
-          href="/catalog/missing"
+          href="/catalog/supplier-offers?status=needs_commercial_offer"
         />
         <KpiCard
-          label="Конфликты (поставщики)"
-          value={String(data.conflictCount)}
-          icon={ShieldAlert}
-          tone="negative"
-          href="/catalog/matching?status=conflict&entity=supplier"
-        />
-        <KpiCard
-          label="Требуют проверки (поставщики)"
-          value={String(data.reviewCount)}
-          icon={HelpCircle}
+          label={SUPPLIER_OFFER_STATUS_LABELS.needs_review}
+          value={String(funnel.needsReview)}
+          icon={ClipboardList}
           tone="warning"
-          href="/catalog/matching"
-        />
-        <KpiCard
-          label="Kaspi листинги сопоставлены"
-          value={String(data.listingMatchedCount)}
-          icon={GitCompare}
-          tone="positive"
-          href="/catalog/matching?entity=listing&status=matched"
-        />
-        <KpiCard
-          label="Kaspi листинги без Commercial Product"
-          value={String(data.listingMissingCount)}
-          icon={AlertTriangle}
-          tone="warning"
-          href="/catalog/missing"
-        />
-        <KpiCard
-          label="Ниже целевой маржи"
-          value={String(data.belowTargetMarginCount)}
-          icon={TrendingDown}
-          tone="warning"
-          href="/catalog/margins"
-        />
-        <KpiCard
-          label="Отрицательная маржа"
-          value={String(data.negativeMarginCount)}
-          icon={TrendingDown}
-          tone="negative"
-          href="/catalog/margins?status=negative"
-        />
-        <KpiCard
-          label="Цена не обновлена после смены закупки"
-          value={String(data.stalePriceCount)}
-          icon={TrendingUp}
-          tone="warning"
-          href="/catalog/margins"
+          href="/catalog/supplier-offers?status=needs_review"
         />
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Link
-          href="/catalog/products"
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-300"
-        >
-          <h2 className="text-base font-semibold text-slate-900">Мастер-каталог</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Товары, характеристики, статусы ассортимента и публикации
-          </p>
-        </Link>
-        <Link
-          href="/catalog/imports"
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-300"
-        >
-          <h2 className="text-base font-semibold text-slate-900">Импорты</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Остатки поставщиков, текущий каталог и цены репрайсера
-          </p>
-        </Link>
-        <Link
-          href="/catalog/matching"
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-300"
-        >
-          <h2 className="text-base font-semibold text-slate-900">Сопоставление</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Проверка и подтверждение связей поставщик → товар
-          </p>
-        </Link>
-        <Link
-          href="/catalog/margins"
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-300"
-        >
-          <h2 className="text-base font-semibold text-slate-900">Маржа</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Ожидаемая и фактическая маржа по товарам и каналам
-          </p>
-        </Link>
-        <Link
-          href="/catalog/listing-strategies"
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-300"
-        >
-          <h2 className="text-base font-semibold text-slate-900">Стратегии листингов</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Группировка листингов по назначению: основной, сезонный, A/B-тест
-          </p>
-        </Link>
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">Требуют внимания</h2>
+          <Link href="/catalog/supplier-offers" className="text-sm font-medium text-blue-700 hover:underline">
+            Смотреть все →
+          </Link>
+        </div>
+
+        {attentionPreview.length > 0 ? (
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-100 text-slate-600">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Наименование</th>
+                  <th className="px-3 py-2 font-medium">Поставщик</th>
+                  <th className="px-3 py-2 font-medium">Закупка</th>
+                  <th className="px-3 py-2 font-medium">Статус</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {attentionPreview.map((offer) => (
+                  <tr key={offer.id}>
+                    <td className="px-3 py-3">
+                      <Link
+                        href={`/catalog/supplier-offers/${offer.id}`}
+                        className="font-medium text-blue-700 hover:underline"
+                      >
+                        {offer.nameRaw}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-3 text-slate-600">{offer.supplierName ?? "—"}</td>
+                    <td className="px-3 py-3 text-slate-600">{formatMoney(offer.purchasePrice)}</td>
+                    <td className="px-3 py-3 text-slate-600">{SUPPLIER_OFFER_STATUS_LABELS[offer.status]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+            Всё разобрано — нет предложений, требующих внимания.
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-base font-semibold text-slate-900">Маржа</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <KpiCard
+            label="Ниже целевой маржи"
+            value={String(reference.belowTargetMarginCount)}
+            icon={TrendingDown}
+            tone="warning"
+            href="/catalog/margins"
+          />
+          <KpiCard
+            label="Отрицательная маржа"
+            value={String(reference.negativeMarginCount)}
+            icon={TrendingDown}
+            tone="negative"
+            href="/catalog/margins?status=negative"
+          />
+          <KpiCard
+            label="Цена не обновлена после смены закупки"
+            value={String(reference.stalePriceCount)}
+            icon={AlertTriangle}
+            tone="warning"
+            href="/catalog/margins"
+          />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">Справочники</h2>
+          <span className="text-xs text-slate-400">внутренние данные, не требуют регулярных действий</span>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Link
+            href="/catalog/products"
+            className="rounded-xl border border-slate-200 p-4 transition-colors hover:border-blue-300"
+          >
+            <div className="flex items-center gap-2 text-slate-500">
+              <Boxes size={16} />
+              <span className="text-xs">Базовые товары</span>
+            </div>
+            <div className="mt-1 text-lg font-semibold text-slate-900">{reference.productMasterCount}</div>
+          </Link>
+          <Link
+            href="/catalog/imports"
+            className="rounded-xl border border-slate-200 p-4 transition-colors hover:border-blue-300"
+          >
+            <div className="flex items-center gap-2 text-slate-500">
+              <Layers size={16} />
+              <span className="text-xs">Коммерческие предложения</span>
+            </div>
+            <div className="mt-1 text-lg font-semibold text-slate-900">{reference.commercialProductCount}</div>
+          </Link>
+          <Link
+            href="/catalog/imports"
+            className="rounded-xl border border-slate-200 p-4 transition-colors hover:border-blue-300"
+          >
+            <div className="flex items-center gap-2 text-slate-500">
+              <Store size={16} />
+              <span className="text-xs">Листинги маркетплейсов</span>
+            </div>
+            <div className="mt-1 text-lg font-semibold text-slate-900">{reference.marketplaceListingCount}</div>
+          </Link>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+          <Link
+            href="/catalog/imports"
+            className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+          >
+            Импорты
+          </Link>
+          <Link
+            href="/catalog/margins"
+            className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+          >
+            Маржа
+          </Link>
+          <Link
+            href="/catalog/listing-strategies"
+            className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+          >
+            Стратегии листингов
+          </Link>
+          <Link
+            href="/catalog/categories"
+            className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+          >
+            Категории
+          </Link>
+          <Link
+            href="/catalog/brands"
+            className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+          >
+            Бренды
+          </Link>
+        </div>
       </section>
     </div>
   );
