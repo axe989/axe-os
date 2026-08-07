@@ -77,9 +77,9 @@ export default async function CatalogMarginsPage({ searchParams }: PageProps) {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {report.rows.map((row) => (
-                      <tr key={row.productId}>
+                      <tr key={row.commercialProductId}>
                         <td className="px-3 py-3">
-                          <Link href={`/catalog/products/${row.productId}?tab=pricing`} className="font-medium text-blue-700 hover:underline">
+                          <Link href={`/catalog/commercial-products/${row.commercialProductId}?tab=pricing`} className="font-medium text-blue-700 hover:underline">
                             {row.name}
                           </Link>
                         </td>

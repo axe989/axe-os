@@ -3,7 +3,8 @@ import { calculateExpectedMargin, calculateExpectedProfit, classifyMarginStatus 
 import type { MarginStatus } from "../types";
 
 export type MarginReportRow = {
-  productId: string;
+  commercialProductId: string;
+  masterProductId: string;
   name: string;
   brandName: string | null;
   purchasePrice: number;
@@ -18,12 +19,15 @@ export type MarginReport = {
   rows: MarginReportRow[];
 };
 
-// Current-moment expected margin per product, computed live from the
-// latest known purchase price (new-condition supplier offer) and current
-// channel sale price. Day-count historical metrics from the spec (days
-// below target/minimum, expected-vs-actual delta) require periodic
-// product_cost_snapshots writes, which aren't automated yet -- see
-// known limitations in the final report.
+// Current-moment expected margin per Commercial Product, computed live
+// from the latest known purchase price (new-condition supplier offer on
+// its underlying Master Product) and current marketplace listing sale
+// price. Margin is a Commercial Product concept, not a Master Product
+// one -- see architecture review §7 (bundle costs aren't yet factored in;
+// that's the next refinement once bundle_components pricing is defined).
+// Day-count historical metrics from the spec (days below target/minimum,
+// expected-vs-actual delta) require periodic product_cost_snapshots
+// writes, which aren't automated yet -- see known limitations.
 export async function getMarginReport(statusFilter?: string): Promise<MarginReport> {
   const supabase = createSupabaseAdminClient();
 
@@ -40,8 +44,8 @@ export async function getMarginReport(statusFilter?: string): Promise<MarginRepo
   }
 
   const { data: products } = await supabase
-    .from("product_master")
-    .select("id, name, product_brands ( name )")
+    .from("commercial_products")
+    .select("id, commercial_name, master_product_id, product_master ( brand_id, product_brands ( name ) )")
     .neq("status", "archived")
     .limit(2000);
 
@@ -49,38 +53,44 @@ export async function getMarginReport(statusFilter?: string): Promise<MarginRepo
     return { hasActiveStrategy: true, rows: [] };
   }
 
-  const productIds = products.map((p) => p.id as string);
+  const masterProductIds = Array.from(new Set(products.map((p) => p.master_product_id as string)));
+  const commercialProductIds = products.map((p) => p.id as string);
 
   const [{ data: offers }, { data: listings }] = await Promise.all([
     supabase
       .from("supplier_offers")
       .select("product_id, purchase_price, last_seen_at")
-      .in("product_id", productIds)
+      .in("product_id", masterProductIds)
       .eq("product_condition", "new")
       .order("last_seen_at", { ascending: false }),
-    supabase.from("channel_listings").select("product_id, current_sale_price").in("product_id", productIds),
+    supabase
+      .from("marketplace_listings")
+      .select("commercial_product_id, current_sale_price")
+      .in("commercial_product_id", commercialProductIds),
   ]);
 
-  const purchasePriceByProduct = new Map<string, number>();
+  const purchasePriceByMasterProduct = new Map<string, number>();
   for (const offer of offers ?? []) {
-    const productId = offer.product_id as string | null;
-    if (productId && offer.purchase_price !== null && !purchasePriceByProduct.has(productId)) {
-      purchasePriceByProduct.set(productId, offer.purchase_price as number);
+    const masterId = offer.product_id as string | null;
+    if (masterId && offer.purchase_price !== null && !purchasePriceByMasterProduct.has(masterId)) {
+      purchasePriceByMasterProduct.set(masterId, offer.purchase_price as number);
     }
   }
 
-  const salePriceByProduct = new Map<string, number>();
+  const salePriceByCommercialProduct = new Map<string, number>();
   for (const listing of listings ?? []) {
-    const productId = listing.product_id as string | null;
-    if (productId && listing.current_sale_price !== null) {
-      salePriceByProduct.set(productId, listing.current_sale_price as number);
+    const commercialProductId = listing.commercial_product_id as string | null;
+    if (commercialProductId && listing.current_sale_price !== null) {
+      salePriceByCommercialProduct.set(commercialProductId, listing.current_sale_price as number);
     }
   }
 
   const rows: MarginReportRow[] = [];
   for (const product of products) {
-    const purchasePrice = purchasePriceByProduct.get(product.id as string);
-    const salePrice = salePriceByProduct.get(product.id as string);
+    const commercialProductId = product.id as string;
+    const masterProductId = product.master_product_id as string;
+    const purchasePrice = purchasePriceByMasterProduct.get(masterProductId);
+    const salePrice = salePriceByCommercialProduct.get(commercialProductId);
     if (purchasePrice === undefined || salePrice === undefined) continue;
 
     const profit = calculateExpectedProfit({
@@ -97,11 +107,13 @@ export async function getMarginReport(statusFilter?: string): Promise<MarginRepo
       minimumMarginPercent: strategy.minimum_margin_percent,
     });
 
-    const brand = Array.isArray(product.product_brands) ? product.product_brands[0] : product.product_brands;
+    const master = Array.isArray(product.product_master) ? product.product_master[0] : product.product_master;
+    const brand = master ? (Array.isArray(master.product_brands) ? master.product_brands[0] : master.product_brands) : null;
 
     rows.push({
-      productId: product.id as string,
-      name: product.name as string,
+      commercialProductId,
+      masterProductId,
+      name: product.commercial_name as string,
       brandName: (brand as { name: string } | null)?.name ?? null,
       purchasePrice,
       salePrice,

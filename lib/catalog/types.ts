@@ -115,6 +115,12 @@ export type RadiatorAttributes = {
   panel_count: number | null;
 };
 
+// Objective manufacturer facts only. status/assortment_status/
+// content_status/publication_readiness used to live here but moved to
+// CommercialProduct (see architecture review, 2026-08-07) -- a Master
+// Product describes what the item IS, never whether/how AXE sells it.
+// The DB columns still physically exist (deprecated, not dropped) but
+// this type intentionally omits them so new code can't read/write them.
 export type ProductMaster = {
   id: string;
   internal_sku: string | null;
@@ -126,13 +132,26 @@ export type ProductMaster = {
   category_id: string | null;
   series: string | null;
   product_type: string | null;
-  status: ProductWorkflowStatus;
-  assortment_status: AssortmentStatus;
   technical_attributes: Record<string, unknown>;
-  content_status: string;
-  publication_readiness: string;
   unit: string;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+// Level 2: what AXE actually sells -- one Master Product may produce many
+// Commercial Products (e.g. "without installation" / "with WiFi module").
+export type CommercialProduct = {
+  id: string;
+  master_product_id: string;
+  commercial_name: string;
+  bundle_components: Record<string, unknown>;
+  status: ProductWorkflowStatus;
+  assortment_status: AssortmentStatus;
+  content_status: string;
+  publication_readiness: string;
+  pricing_strategy_id: string | null;
+  preferred_supplier_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -190,6 +209,9 @@ export type CatalogImportRow = {
   created_at: string;
 };
 
+// Level 1 -> Level 1 matching: supplier_offers -> product_master.
+// Supplier price lists remain the source of truth for Master Products;
+// this is unchanged by the four-level model.
 export type ProductMatch = {
   id: string;
   supplier_product_id: string;
@@ -204,9 +226,16 @@ export type ProductMatch = {
   updated_at: string;
 };
 
-export type ChannelListing = {
+// Level 3: how a Commercial Product is presented on a given marketplace.
+// Many listings may reference the same Commercial Product (different
+// title/photos/SEO/price/publication status per listing). Renamed from
+// ChannelListing (table renamed channel_listings -> marketplace_listings,
+// 2026-08-07) now that Kaspi XML is understood to be a listing source,
+// never a master-catalog source.
+export type MarketplaceListing = {
   id: string;
-  product_id: string | null;
+  commercial_product_id: string | null;
+  listing_strategy_id: string | null;
   sales_channel: string;
   external_listing_id: string | null;
   external_sku: string | null;
@@ -217,6 +246,57 @@ export type ChannelListing = {
   last_synced_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// Level 3 -> Level 2 matching: marketplace_listings -> commercial_products
+// (Kaspi XML -> Marketplace Listing -> Matching Engine -> Commercial
+// Product -> Master Product). Structurally identical to ProductMatch,
+// kept as a separate table/type since the candidate pools differ.
+export type ListingMatch = {
+  id: string;
+  marketplace_listing_id: string;
+  commercial_product_id: string | null;
+  match_status: MatchStatus;
+  confidence_score: number | null;
+  match_method: MatchMethod;
+  match_reasons: string[];
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// Level 4: a grouping of marketplace listings by purpose (primary/
+// alternative/premium/seasonal/experiment/...). `purpose` is free text
+// with suggested values rather than a hard enum -- the business invents
+// new experiment types faster than migrations can track them.
+export type ListingStrategy = {
+  id: string;
+  name: string;
+  purpose: string | null;
+  priority: number | null;
+  is_ab_test: boolean;
+  expected_audience: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+// Performance is a measured fact over time, not configuration -- an
+// append-only snapshot, same rationale as price/cost history elsewhere.
+export type ListingStrategyPerformanceSnapshot = {
+  id: string;
+  listing_strategy_id: string;
+  snapshot_date: string;
+  impressions: number | null;
+  clicks: number | null;
+  ctr: number | null;
+  orders_count: number | null;
+  revenue: number | null;
+  conversion_rate: number | null;
+  recorded_at: string;
 };
 
 export type PricingStrategy = {

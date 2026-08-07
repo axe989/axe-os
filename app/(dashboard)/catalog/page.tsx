@@ -4,8 +4,10 @@ import {
   Boxes,
   GitCompare,
   HelpCircle,
+  Layers,
   PackageSearch,
   ShieldAlert,
+  Store,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
@@ -45,10 +47,22 @@ export default async function CatalogDashboardPage() {
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <KpiCard
-          label="Товары в каталоге"
+          label="Master Product"
           value={String(data.productMasterCount)}
           icon={Boxes}
           href="/catalog/products"
+        />
+        <KpiCard
+          label="Commercial Product"
+          value={String(data.commercialProductCount)}
+          icon={Layers}
+          href="/catalog/products"
+        />
+        <KpiCard
+          label="Листингов маркетплейсов"
+          value={String(data.marketplaceListingCount)}
+          icon={Store}
+          href="/catalog/imports"
         />
         <KpiCard
           label="Позиций от поставщиков"
@@ -57,39 +71,53 @@ export default async function CatalogDashboardPage() {
           href="/catalog/imports"
         />
         <KpiCard
-          label="Сопоставлено"
+          label="Поставщики сопоставлены"
           value={String(data.matchedCount)}
           icon={GitCompare}
           tone="positive"
           href="/catalog/matching?status=matched"
         />
         <KpiCard
-          label="Вероятные совпадения"
+          label="Вероятные совпадения (поставщики)"
           value={String(data.probableCount)}
           icon={HelpCircle}
           tone="warning"
-          href="/catalog/matching?status=probable"
+          href="/catalog/matching?status=probable&entity=supplier"
         />
         <KpiCard
-          label="Отсутствуют в каталоге"
+          label="Отсутствуют Master Product"
           value={String(data.missingCount)}
           icon={AlertTriangle}
           tone="warning"
           href="/catalog/missing"
         />
         <KpiCard
-          label="Конфликты"
+          label="Конфликты (поставщики)"
           value={String(data.conflictCount)}
           icon={ShieldAlert}
           tone="negative"
-          href="/catalog/matching?status=conflict"
+          href="/catalog/matching?status=conflict&entity=supplier"
         />
         <KpiCard
-          label="Требуют проверки"
+          label="Требуют проверки (поставщики)"
           value={String(data.reviewCount)}
           icon={HelpCircle}
           tone="warning"
           href="/catalog/matching"
+        />
+        <KpiCard
+          label="Kaspi листинги сопоставлены"
+          value={String(data.listingMatchedCount)}
+          icon={GitCompare}
+          tone="positive"
+          href="/catalog/matching?entity=listing&status=matched"
+        />
+        <KpiCard
+          label="Kaspi листинги без Commercial Product"
+          value={String(data.listingMissingCount)}
+          icon={AlertTriangle}
+          tone="warning"
+          href="/catalog/missing"
         />
         <KpiCard
           label="Ниже целевой маржи"
@@ -149,6 +177,15 @@ export default async function CatalogDashboardPage() {
           <h2 className="text-base font-semibold text-slate-900">Маржа</h2>
           <p className="mt-1 text-sm text-slate-500">
             Ожидаемая и фактическая маржа по товарам и каналам
+          </p>
+        </Link>
+        <Link
+          href="/catalog/listing-strategies"
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-300"
+        >
+          <h2 className="text-base font-semibold text-slate-900">Стратегии листингов</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Группировка листингов по назначению: основной, сезонный, A/B-тест
           </p>
         </Link>
       </section>

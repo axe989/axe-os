@@ -18,7 +18,15 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   },
   "/catalog/products": {
     title: "Товары",
-    subtitle: "Мастер-каталог товаров AXE OS",
+    subtitle: "Master Product — объективные факты производителя",
+  },
+  "/catalog/commercial-products": {
+    title: "Коммерческие товары",
+    subtitle: "Commercial Product — что AXE фактически продаёт",
+  },
+  "/catalog/listing-strategies": {
+    title: "Стратегии листингов",
+    subtitle: "Listing Strategy — группировка листингов по назначению",
   },
   "/catalog/imports": {
     title: "Импорты",

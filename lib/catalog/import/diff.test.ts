@@ -67,3 +67,31 @@ describe("hasChannelPriceChanged", () => {
     expect(hasChannelPriceChanged(null, null)).toBe(false);
   });
 });
+
+describe("historical pricing stays immutable across re-matching (Commercial Product layer)", () => {
+  // Per the four-level architecture, a Marketplace Listing's
+  // commercial_product_id link can change (re-matched to a different
+  // Commercial Product, or unlinked/relinked after human review) without
+  // its price ever changing. hasChannelPriceChanged only ever looks at
+  // the price value -- it has no awareness of commercial_product_id or
+  // any other identity/link field -- so re-matching alone can never
+  // trigger a new price_history row, and no existing history row is ever
+  // rewritten by a re-match. This is what "never overwrite historical
+  // purchase or sale prices" reduces to at the pure-function level.
+  it("reports no change when only the matched Commercial Product would differ, price held constant", () => {
+    // Simulates: listing was linked to commercial-product-A at 52000,
+    // gets re-matched to commercial-product-B, price on the listing is
+    // untouched by the re-match.
+    const priceBeforeRematch = 52000;
+    const priceAfterRematch = 52000;
+
+    expect(hasChannelPriceChanged(priceBeforeRematch, priceAfterRematch)).toBe(false);
+  });
+
+  it("a real price change is still detected independently of any re-matching", () => {
+    const priceBeforeRematch = 52000;
+    const priceAfterRematchAndRepriced = 48000;
+
+    expect(hasChannelPriceChanged(priceBeforeRematch, priceAfterRematchAndRepriced)).toBe(true);
+  });
+});

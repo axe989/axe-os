@@ -191,6 +191,13 @@ export function matchSupplierOffer(
   };
 }
 
+// The priority-tier algorithm above is entity-agnostic (it only ever
+// reasons about EAN/SKU/brand/series/name/attributes, never "supplier" or
+// "master product" specifically), so matching a marketplace listing
+// against Commercial Product candidates (Level 3 -> Level 2) reuses it
+// unchanged -- only the candidate pool and offer-input source differ.
+export const matchListingToCommercialProduct = matchSupplierOffer;
+
 function resolveTier(
   matches: MatchCandidateProduct[],
   method: MatchResult["method"],

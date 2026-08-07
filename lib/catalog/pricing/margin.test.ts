@@ -164,3 +164,65 @@ describe("classifyMarginStatus", () => {
     ).toBe("healthy");
   });
 });
+
+describe("margin calculation through the Commercial Product layer", () => {
+  // Per the four-level architecture (Master Product -> Commercial Product
+  // -> Marketplace Listing -> Listing Strategy, 2026-08-07), purchase cost
+  // is shared (sourced once from the Master Product's supplier offer) but
+  // sale price is per-listing -- many Marketplace Listings can reference
+  // the same Commercial Product with different prices. The pricing
+  // functions themselves don't change; what changes is that one
+  // purchasePrice is now evaluated against several independent
+  // salePrice inputs instead of a single 1:1 product->price pair.
+  const sharedPurchasePrice = 60000; // from the Master Product's supplier offer
+  const costAssumptions = {
+    commissionPercent: 10,
+    logisticsCost: 2000,
+    advertisingPercent: 5,
+    otherVariableCost: 1000,
+  };
+
+  it("produces different margins for different Marketplace Listings under the same Commercial Product", () => {
+    const primaryListingPrice = 100000;
+    const seasonalListingPrice = 92000;
+
+    const primaryProfit = calculateExpectedProfit({
+      salePrice: primaryListingPrice,
+      purchasePrice: sharedPurchasePrice,
+      ...costAssumptions,
+    });
+    const seasonalProfit = calculateExpectedProfit({
+      salePrice: seasonalListingPrice,
+      purchasePrice: sharedPurchasePrice,
+      ...costAssumptions,
+    });
+
+    const primaryMargin = calculateExpectedMargin(primaryProfit, primaryListingPrice);
+    const seasonalMargin = calculateExpectedMargin(seasonalProfit, seasonalListingPrice);
+
+    // Same underlying cost, different listing price -> different margin.
+    expect(primaryMargin).not.toBeCloseTo(seasonalMargin, 1);
+    expect(primaryMargin).toBeGreaterThan(seasonalMargin);
+  });
+
+  it("classifies one listing as healthy and a lower-priced sibling listing as below target, from the same cost basis", () => {
+    const thresholds = { targetMarginPercent: 20, minimumMarginPercent: 10 };
+
+    const healthyListingProfit = calculateExpectedProfit({
+      salePrice: 100000,
+      purchasePrice: sharedPurchasePrice,
+      ...costAssumptions,
+    });
+    const healthyMargin = calculateExpectedMargin(healthyListingProfit, 100000);
+
+    const discountedListingProfit = calculateExpectedProfit({
+      salePrice: 90000,
+      purchasePrice: sharedPurchasePrice,
+      ...costAssumptions,
+    });
+    const discountedMargin = calculateExpectedMargin(discountedListingProfit, 90000);
+
+    expect(classifyMarginStatus(healthyMargin, thresholds)).toBe("healthy");
+    expect(classifyMarginStatus(discountedMargin, thresholds)).toBe("below_target");
+  });
+});

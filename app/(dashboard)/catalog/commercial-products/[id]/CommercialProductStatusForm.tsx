@@ -20,12 +20,12 @@ const WORKFLOW_STATUSES = [
 
 const ASSORTMENT_STATUSES = ["active", "order_only", "candidate", "excluded", "archived"];
 
-export default function ProductStatusForm({
-  productId,
+export default function CommercialProductStatusForm({
+  commercialProductId,
   status,
   assortmentStatus,
 }: {
-  productId: string;
+  commercialProductId: string;
   status: string;
   assortmentStatus: string;
 }) {
@@ -38,7 +38,7 @@ export default function ProductStatusForm({
   async function save() {
     setBusy(true);
     try {
-      const response = await fetch(`/api/catalog/products/${productId}`, {
+      const response = await fetch(`/api/catalog/commercial-products/${commercialProductId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

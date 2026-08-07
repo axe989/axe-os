@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 
-type ProductPatchPayload = {
+type CommercialProductPatchPayload = {
   status?: string;
   assortmentStatus?: string;
   reason?: string;
@@ -13,7 +13,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await context.params;
-    const body = (await request.json()) as ProductPatchPayload;
+    const body = (await request.json()) as CommercialProductPatchPayload;
     const supabase = createSupabaseAdminClient();
 
     const sessionClient = await createClient();
@@ -24,14 +24,14 @@ export async function PATCH(
     const nowIso = new Date().toISOString();
 
     const { data: current, error: readError } = await supabase
-      .from("product_master")
+      .from("commercial_products")
       .select("id, status, assortment_status")
       .eq("id", id)
       .single();
 
     if (readError || !current) {
       return NextResponse.json(
-        { success: false, error: readError?.message ?? "Товар не найден" },
+        { success: false, error: readError?.message ?? "Коммерческий товар не найден" },
         { status: 404 },
       );
     }
@@ -42,7 +42,7 @@ export async function PATCH(
     if (body.status && body.status !== current.status) {
       updatePayload.status = body.status;
       historyRows.push({
-        product_id: id,
+        commercial_product_id: id,
         change_type: "status",
         previous_value: current.status,
         new_value: body.status,
@@ -55,7 +55,7 @@ export async function PATCH(
     if (body.assortmentStatus && body.assortmentStatus !== current.assortment_status) {
       updatePayload.assortment_status = body.assortmentStatus;
       historyRows.push({
-        product_id: id,
+        commercial_product_id: id,
         change_type: "assortment_status",
         previous_value: current.assortment_status,
         new_value: body.assortmentStatus,
@@ -66,7 +66,7 @@ export async function PATCH(
     }
 
     const { error: updateError } = await supabase
-      .from("product_master")
+      .from("commercial_products")
       .update(updatePayload)
       .eq("id", id);
 

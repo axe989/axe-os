@@ -9,8 +9,8 @@ import {
 } from "./supplier-stock";
 import { normalizeChannelCatalogRow, type ChannelCatalogColumnMapping } from "./channel-catalog";
 import { hasChannelPriceChanged, hasSupplierOfferChanged } from "./diff";
-import { fetchProductCandidates } from "./matching-service";
-import { matchSupplierOffer, type MatchOfferInput } from "../matching/engine";
+import { fetchCommercialProductCandidates, fetchProductCandidates } from "./matching-service";
+import { matchListingToCommercialProduct, matchSupplierOffer, type MatchOfferInput } from "../matching/engine";
 
 export type ImportSummary = {
   importId: string;
@@ -490,7 +490,7 @@ export async function runChannelCatalogImport(params: {
     for (const batch of chunk(skus, CHUNK_SIZE)) {
       if (batch.length === 0) continue;
       const { data } = await supabase
-        .from("channel_listings")
+        .from("marketplace_listings")
         .select("id, external_sku, current_sale_price")
         .eq("sales_channel", params.salesChannel)
         .in("external_sku", batch);
@@ -548,7 +548,7 @@ export async function runChannelCatalogImport(params: {
     for (const batch of chunk(listingUpsertPayload, CHUNK_SIZE)) {
       if (batch.length === 0) continue;
       const { data: upserted, error } = await supabase
-        .from("channel_listings")
+        .from("marketplace_listings")
         .upsert(
           batch.map((b) => b.payload),
           { onConflict: "sales_channel,external_sku" },
@@ -606,6 +606,90 @@ export async function runChannelCatalogImport(params: {
       if (error) throw new Error(`Не удалось сохранить строки импорта: ${error.message}`);
     }
 
+    // --- Matching: Level 3 -> Level 2 (Kaspi XML -> Marketplace Listing
+    // -> Matching Engine -> Commercial Product). Computed in memory (pure
+    // function), only results are written, and only for listings not
+    // already human-reviewed -- same rules as the supplier-side matching
+    // in runSupplierStockImport. ---
+    const touchedListingIds = Array.from(listingIdBySku.values());
+    const matchSummary: Record<string, number> = {};
+
+    const [{ data: brands }, commercialCandidates, lockedMatches] = await Promise.all([
+      supabase.from("product_brands").select("id, normalized_name"),
+      fetchCommercialProductCandidates(supabase),
+      touchedListingIds.length > 0
+        ? supabase
+            .from("listing_matches")
+            .select("marketplace_listing_id")
+            .in("marketplace_listing_id", touchedListingIds)
+            .not("reviewed_by", "is", null)
+        : Promise.resolve({ data: [] as { marketplace_listing_id: string }[] }),
+    ]);
+
+    const brandIdByName = new Map((brands ?? []).map((b) => [b.normalized_name, b.id as string]));
+    const lockedListingIds = new Set(
+      (lockedMatches.data ?? []).map((m) => m.marketplace_listing_id as string),
+    );
+
+    const listingMatchRowsToUpsert: Record<string, unknown>[] = [];
+    const commercialProductIdUpdates: { listingId: string; commercialProductId: string }[] = [];
+
+    for (const { sku, payload } of listingUpsertPayload) {
+      const listingId = listingIdBySku.get(sku);
+      if (!listingId || lockedListingIds.has(listingId)) continue;
+
+      const rawPayload = payload.raw_payload as {
+        radiator: unknown;
+        brand_raw: string | null;
+      };
+      const radiatorAttributes = (
+        rawPayload.radiator as { attributes?: Record<string, unknown> } | null
+      )?.attributes;
+
+      const offerInput: MatchOfferInput = {
+        ean: null,
+        manufacturerSkuRaw: null,
+        nameRaw: payload.title ?? "",
+        brandId: rawPayload.brand_raw
+          ? (brandIdByName.get(rawPayload.brand_raw.trim().toLowerCase()) ?? null)
+          : null,
+        series: null,
+        radiatorAttributes: radiatorAttributes ?? null,
+      };
+
+      const result = matchListingToCommercialProduct(offerInput, commercialCandidates);
+      matchSummary[result.status] = (matchSummary[result.status] ?? 0) + 1;
+
+      listingMatchRowsToUpsert.push({
+        marketplace_listing_id: listingId,
+        commercial_product_id: result.productId,
+        match_status: result.status,
+        confidence_score: result.confidence,
+        match_method: result.method,
+        match_reasons: result.reasons,
+        updated_at: nowIso,
+      });
+
+      if (result.status === "matched" && result.productId) {
+        commercialProductIdUpdates.push({ listingId, commercialProductId: result.productId });
+      }
+    }
+
+    for (const batch of chunk(listingMatchRowsToUpsert, CHUNK_SIZE)) {
+      if (batch.length === 0) continue;
+      const { error } = await supabase
+        .from("listing_matches")
+        .upsert(batch, { onConflict: "marketplace_listing_id" });
+      if (error) throw new Error(`Не удалось сохранить результаты сопоставления листингов: ${error.message}`);
+    }
+
+    for (const { listingId, commercialProductId } of commercialProductIdUpdates) {
+      await supabase
+        .from("marketplace_listings")
+        .update({ commercial_product_id: commercialProductId })
+        .eq("id", listingId);
+    }
+
     const status = rowsRejected > 0 ? "completed_with_errors" : "completed";
 
     await supabase
@@ -625,7 +709,7 @@ export async function runChannelCatalogImport(params: {
       rowsImported,
       rowsSkippedUnchanged,
       rowsRejected,
-      matchSummary: {},
+      matchSummary,
     };
   } catch (err) {
     await markImportFailed(supabase, importId);
