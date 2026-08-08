@@ -2,6 +2,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { resolveLaunchChecklist } from "../checklist/resolve-checklist";
 import { LAUNCH_TEAM_LABELS } from "../checklist/labels";
 import { pickNextAction, nextActionLabelFor } from "../checklist/next-action";
+import { stageForStatus, type StageKey } from "../production/stages";
 import type { ProductWorkflowStatus } from "../types";
 
 export type ProductDevelopmentRow = {
@@ -20,15 +21,22 @@ export type ProductDevelopmentRow = {
   listingCount: number;
 };
 
+export type ProductDevelopmentFilters = {
+  status?: ProductWorkflowStatus;
+  stage?: StageKey;
+  readinessMin?: number;
+  readinessMax?: number;
+};
+
 // One resolveLaunchChecklist call per row -- real, correct, and fine at
 // pilot scale (verified against the real dataset: a handful of
 // commercial products). Fetching hundreds of thousands of rows this way
 // would need pagination/caching first; that's Year 2+ scale per the
 // approved business architecture, not Phase 1.
-export async function listProductDevelopment(): Promise<ProductDevelopmentRow[]> {
+export async function listProductDevelopment(filters: ProductDevelopmentFilters = {}): Promise<ProductDevelopmentRow[]> {
   const supabase = createSupabaseAdminClient();
 
-  const { data: products, error } = await supabase
+  let query = supabase
     .from("commercial_products")
     .select(
       "id, commercial_name, status, master_product_id, product_master ( name, brand_id, product_brands ( name ) )",
@@ -37,12 +45,20 @@ export async function listProductDevelopment(): Promise<ProductDevelopmentRow[]>
     .order("updated_at", { ascending: false })
     .limit(500);
 
+  if (filters.status) query = query.eq("status", filters.status);
+
+  const { data: products, error } = await query;
+
   if (error) {
     throw new Error(`Не удалось загрузить подготовку товаров: ${error.message}`);
   }
 
+  const filteredProducts = filters.stage
+    ? (products ?? []).filter((p) => stageForStatus(p.status as ProductWorkflowStatus) === filters.stage)
+    : (products ?? []);
+
   const rows = await Promise.all(
-    (products ?? []).map(async (product) => {
+    filteredProducts.map(async (product) => {
       const master = Array.isArray(product.product_master) ? product.product_master[0] : product.product_master;
       const brand = master ? (Array.isArray(master.product_brands) ? master.product_brands[0] : master.product_brands) : null;
       const masterProductId = product.master_product_id as string;
@@ -76,5 +92,10 @@ export async function listProductDevelopment(): Promise<ProductDevelopmentRow[]>
     }),
   );
 
-  return rows;
+  if (filters.readinessMin === undefined && filters.readinessMax === undefined) return rows;
+  return rows.filter(
+    (r) =>
+      (filters.readinessMin === undefined || r.checklistCompletionPercent >= filters.readinessMin) &&
+      (filters.readinessMax === undefined || r.checklistCompletionPercent <= filters.readinessMax),
+  );
 }

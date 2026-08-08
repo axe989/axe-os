@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listProductDevelopment } from "@/lib/catalog/queries/product-development";
-import { STAGE_COLUMNS, stageForStatus } from "@/lib/catalog/production/stages";
+import { STAGE_COLUMNS, stageForStatus, type StageKey } from "@/lib/catalog/production/stages";
+import type { ProductWorkflowStatus } from "@/lib/catalog/types";
 
 export const dynamic = "force-dynamic";
 
@@ -20,19 +21,34 @@ function readinessClassName(pct: number) {
   return "bg-red-500";
 }
 
-type PageProps = { searchParams: Promise<{ view?: string }> };
+type PageProps = { searchParams: Promise<{ view?: string; status?: string; stage?: string; readinessMin?: string; readinessMax?: string }> };
 
 export default async function ProductDevelopmentPage({ searchParams }: PageProps) {
-  const { view } = await searchParams;
+  const { view, status, stage, readinessMin, readinessMax } = await searchParams;
   const isKanban = view === "kanban";
-  const rows = await listProductDevelopment();
+  const rows = await listProductDevelopment({
+    status: (status as ProductWorkflowStatus) || undefined,
+    stage: (stage as StageKey) || undefined,
+    readinessMin: readinessMin ? Number(readinessMin) : undefined,
+    readinessMax: readinessMax ? Number(readinessMax) : undefined,
+  });
 
   return (
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-700">Подготовка товаров</h2>
-          <p className="mt-1 text-xs text-slate-500">{rows.length} товаров в работе</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {rows.length} товаров в работе
+            {status || stage || readinessMin || readinessMax ? (
+              <>
+                {" "}· фильтр применён ·{" "}
+                <Link href="/product-center-v2/development" className="text-blue-600 hover:underline">
+                  сбросить
+                </Link>
+              </>
+            ) : null}
+          </p>
         </div>
         <div className="flex rounded-lg border border-slate-300 p-0.5 text-xs font-medium">
           <Link

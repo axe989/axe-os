@@ -283,7 +283,7 @@ export async function getProductCard(commercialProductId: string): Promise<Produ
   const { data: statusHistory } = await supabase
     .from("product_status_history")
     .select("change_type, previous_value, new_value, reason, changed_by, created_at")
-    .eq("product_id", masterProductId)
+    .eq("commercial_product_id", commercialProductId)
     .order("created_at", { ascending: true });
   for (const row of statusHistory ?? []) {
     history.push({
