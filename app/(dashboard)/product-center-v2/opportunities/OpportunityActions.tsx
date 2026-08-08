@@ -33,33 +33,25 @@ export default function OpportunityActions({ supplierOfferId }: { supplierOfferI
         type="button"
         disabled={busy !== null}
         onClick={() => decide("accepted")}
-        className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
       >
-        {busy === "accepted" ? "…" : "Принять"}
-      </button>
-      <button
-        type="button"
-        disabled={busy !== null}
-        onClick={() => decide("rejected")}
-        className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
-      >
-        {busy === "rejected" ? "…" : "Отклонить"}
+        {busy === "accepted" ? "…" : "Добавить в ассортимент"}
       </button>
       <button
         type="button"
         disabled={busy !== null}
         onClick={() => decide("postponed")}
-        className="rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
       >
-        {busy === "postponed" ? "…" : "Отложить"}
+        {busy === "postponed" ? "…" : "Рассмотреть позже"}
       </button>
       <button
         type="button"
         disabled={busy !== null}
-        onClick={() => decide("ignored")}
-        className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 disabled:opacity-50"
+        onClick={() => decide("rejected")}
+        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
       >
-        {busy === "ignored" ? "…" : "Игнорировать"}
+        {busy === "rejected" ? "…" : "Не добавлять"}
       </button>
     </div>
   );
