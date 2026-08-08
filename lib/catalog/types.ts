@@ -9,12 +9,14 @@ export type ProductWorkflowStatus =
   | "draft"
   | "needs_technical_data"
   | "needs_content"
+  | "needs_images"
   | "needs_price"
   | "review"
   | "approved"
   | "ready_to_publish"
   | "published"
   | "needs_update"
+  | "optimization"
   | "archived";
 
 export type AssortmentStatus =
@@ -23,6 +25,13 @@ export type AssortmentStatus =
   | "candidate"
   | "excluded"
   | "archived";
+
+// Product Center v2.0 Opportunity Queue: the explicit decision recorded
+// on a supplier_offers row before (or instead of) a Base Product ever
+// gets created. Distinct from AssortmentStatus, which describes a
+// Commercial Product that already exists -- this describes whether one
+// should exist at all yet.
+export type AssortmentDecision = "pending" | "accepted" | "rejected" | "ignored" | "postponed";
 
 export type ProductCondition =
   | "new"
@@ -218,6 +227,10 @@ export type SupplierOffer = {
   raw_payload: Record<string, unknown> | null;
   source_updated_at: string | null;
   last_seen_at: string | null;
+  assortment_decision: AssortmentDecision;
+  assortment_decision_reason: string | null;
+  assortment_decision_by: string | null;
+  assortment_decision_at: string | null;
   created_at: string;
   updated_at: string;
 };
