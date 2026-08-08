@@ -112,17 +112,36 @@ export async function listSupplierFeed(filters: SupplierFeedFilters = {}): Promi
     ),
   );
 
+  // seller_sku (the deterministic AXE-{BRAND}-{MODEL}-{VARIANT} identifier)
+  // lives on marketplace_publication_items, generated per publication
+  // attempt -- not a standing column on commercial_products. Bridge
+  // master_product_id -> commercial_products -> publication items.
   const { data: commercialProducts } =
     masterProductIds.length > 0
-      ? await supabase.from("commercial_products").select("master_product_id, seller_sku").in("master_product_id", masterProductIds)
-      : { data: [] as { master_product_id: string; seller_sku: string | null }[] };
+      ? await supabase.from("commercial_products").select("id, master_product_id").in("master_product_id", masterProductIds)
+      : { data: [] as { id: string; master_product_id: string }[] };
+
+  const masterByCommercialId = new Map(
+    ((commercialProducts ?? []) as { id: string; master_product_id: string }[]).map((cp) => [cp.id, cp.master_product_id]),
+  );
+  const commercialProductIds = Array.from(masterByCommercialId.keys());
+
+  const { data: publicationItems } =
+    commercialProductIds.length > 0
+      ? await supabase
+          .from("marketplace_publication_items")
+          .select("commercial_product_id, seller_sku")
+          .in("commercial_product_id", commercialProductIds)
+          .not("seller_sku", "is", null)
+      : { data: [] as { commercial_product_id: string; seller_sku: string | null }[] };
 
   const sellerSkusByMaster = new Map<string, string[]>();
-  for (const cp of (commercialProducts ?? []) as { master_product_id: string; seller_sku: string | null }[]) {
-    if (!cp.seller_sku) continue;
-    const list = sellerSkusByMaster.get(cp.master_product_id) ?? [];
-    list.push(cp.seller_sku);
-    sellerSkusByMaster.set(cp.master_product_id, list);
+  for (const item of (publicationItems ?? []) as { commercial_product_id: string; seller_sku: string | null }[]) {
+    const masterId = masterByCommercialId.get(item.commercial_product_id);
+    if (!masterId || !item.seller_sku) continue;
+    const list = sellerSkusByMaster.get(masterId) ?? [];
+    list.push(item.seller_sku);
+    sellerSkusByMaster.set(masterId, list);
   }
 
   const rows: SupplierFeedRow[] = (offers ?? []).map((offer) => {
