@@ -29,6 +29,22 @@ export async function POST(request: Request) {
       data: { user },
     } = await sessionClient.auth.getUser();
 
+    const { data: existing } = await supabase
+      .from("commercial_product_launch_tasks")
+      .select("status_override, completed_at")
+      .eq("commercial_product_id", body.commercialProductId)
+      .eq("item_key", body.itemKey)
+      .maybeSingle();
+
+    const statusOverride = body.statusOverride || null;
+    // Stamp completed_at the moment an item first moves to "done"; keep
+    // that original timestamp on repeat saves; clear it the moment it
+    // moves away from "done" again.
+    const completedAt =
+      statusOverride === "done"
+        ? (existing?.status_override === "done" ? existing.completed_at : new Date().toISOString())
+        : null;
+
     const { error } = await supabase
       .from("commercial_product_launch_tasks")
       .upsert(
@@ -36,8 +52,9 @@ export async function POST(request: Request) {
           commercial_product_id: body.commercialProductId,
           item_key: body.itemKey,
           target_date: body.targetDate || null,
-          status_override: body.statusOverride || null,
+          status_override: statusOverride,
           blocking_note: body.blockingNote || null,
+          completed_at: completedAt,
           updated_by: user?.email ?? null,
           updated_at: new Date().toISOString(),
         },

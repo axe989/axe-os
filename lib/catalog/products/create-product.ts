@@ -159,6 +159,43 @@ export async function createMasterProductFromSupplierOffer(
   return { masterProductId, commercialProductId };
 }
 
+export type CreateCommercialVariantParams = {
+  masterProductId: string;
+  commercialName: string;
+  reason: string;
+  changedBy: string | null;
+};
+
+// A Master Product can carry more than one sellable packaging (e.g. a
+// single-unit vs. a set-of-N bundle of the same physical item) -- this is
+// the explicit "add another Commercial Product on top of an existing
+// Master Product" path referenced in the Product Center v2 UI as
+// "Создать коммерческий вариант", distinct from
+// createMasterProductFromSupplierOffer (which always creates both levels
+// together for a brand-new item).
+export async function createCommercialVariant(
+  supabase: AnySupabase,
+  params: CreateCommercialVariantParams,
+): Promise<{ commercialProductId: string }> {
+  const { data: master, error } = await supabase
+    .from("product_master")
+    .select("id")
+    .eq("id", params.masterProductId)
+    .single();
+
+  if (error || !master) throw new Error(`Товар не найден: ${error?.message}`);
+
+  const commercialProductId = await createDefaultCommercialProduct(supabase, {
+    masterProductId: params.masterProductId,
+    commercialName: params.commercialName,
+    assortmentStatus: "candidate",
+    reason: params.reason,
+    changedBy: params.changedBy,
+  });
+
+  return { commercialProductId };
+}
+
 export type CreateCommercialProductFromListingParams = {
   marketplaceListingId: string;
   assortmentStatus: AssortmentStatus;

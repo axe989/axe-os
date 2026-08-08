@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/product-center-v2/supplier-feed", label: "Лента поставщиков" },
-  { href: "/product-center-v2/opportunities", label: "Очередь возможностей" },
-  { href: "/product-center-v2/development", label: "Производство товара" },
+  { href: "/product-center-v2/supplier-feed", label: "Предложения поставщиков" },
+  { href: "/product-center-v2/opportunities", label: "Товары на рассмотрении" },
+  { href: "/product-center-v2/development", label: "Подготовка товаров" },
   { href: "/product-center-v2/marketplace", label: "Маркетплейсы" },
   { href: "/product-center-v2/dashboard", label: "Панель руководителя" },
 ];

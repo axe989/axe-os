@@ -1,11 +1,13 @@
 import type { ChecklistCategory, ChecklistItemStatus, LaunchTeam } from "./types";
 
 export const CHECKLIST_CATEGORY_LABELS: Record<ChecklistCategory, string> = {
-  business: "Бизнес",
-  pricing: "Цена",
+  assortment_decision: "Ассортиментное решение",
+  supplier_data: "Данные поставщика",
+  pricing: "Ценообразование",
+  technical_specs: "Технические характеристики",
   content: "Контент",
   media: "Медиа",
-  marketplace_attributes: "Атрибуты маркетплейса",
+  marketplace_attributes: "Marketplace-атрибуты",
   publication: "Публикация",
   post_publication_verification: "Проверка после публикации",
 };

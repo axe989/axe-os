@@ -29,7 +29,7 @@ export default async function ProductCardPage({ params }: PageProps) {
   return (
     <div>
       <Link href="/product-center-v2/development" className="text-sm text-blue-600 hover:underline">
-        ← Производство товара
+        ← Подготовка товаров
       </Link>
 
       <header className="mt-2 mb-5 rounded-2xl border border-slate-200 bg-white p-5">

@@ -12,10 +12,10 @@ type Body = {
 const VALID_DECISIONS: AssortmentDecision[] = ["accepted", "rejected", "ignored", "postponed"];
 
 const DEFAULT_REASONS: Record<string, string> = {
-  accepted: "Принято в ассортимент через Очередь возможностей",
-  rejected: "Отклонено через Очередь возможностей",
-  ignored: "Проигнорировано через Очередь возможностей",
-  postponed: "Отложено через Очередь возможностей",
+  accepted: "Добавлено в ассортимент через Товары на рассмотрении",
+  rejected: "Не добавлено в ассортимент через Товары на рассмотрении",
+  ignored: "Проигнорировано через Товары на рассмотрении",
+  postponed: "Отложено на рассмотрение через Товары на рассмотрении",
 };
 
 export async function POST(request: Request) {

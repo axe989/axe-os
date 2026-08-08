@@ -6,9 +6,16 @@
 // the whole product lifecycle. Both are real, both stay -- this one is
 // just built partly on top of the other's signals (see resolve-checklist.ts).
 
+// 9 categories per the approved mandate (was 7): "business" split into
+// assortment_decision + supplier_data, and "marketplace_attributes" split
+// into technical_specs + marketplace_attributes. Item keys are unchanged
+// so existing commercial_product_launch_tasks overlay rows (keyed by
+// item_key, not category) keep working untouched.
 export type ChecklistCategory =
-  | "business"
+  | "assortment_decision"
+  | "supplier_data"
   | "pricing"
+  | "technical_specs"
   | "content"
   | "media"
   | "marketplace_attributes"
@@ -24,6 +31,10 @@ export type ChecklistItemDefinition = {
   category: ChecklistCategory;
   label: string;
   team: LaunchTeam;
+  // Whether an incomplete item blocks moving to publication, vs. one that
+  // matters for quality/completeness but isn't a hard gate (e.g. a bundle
+  // definition on a product that isn't sold as a bundle).
+  blocking: boolean;
 };
 
 export type ResolvedChecklistItem = {
@@ -31,9 +42,11 @@ export type ResolvedChecklistItem = {
   category: ChecklistCategory;
   label: string;
   team: LaunchTeam;
+  blocking: boolean;
   status: ChecklistItemStatus;
   note: string | null;
   targetDate: string | null;
+  completedAt: string | null;
   source: "auto" | "manual";
 };
 

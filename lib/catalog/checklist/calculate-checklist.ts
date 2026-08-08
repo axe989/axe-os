@@ -20,6 +20,11 @@ export type ManualOverlay = {
   targetDate: string | null;
   statusOverride: Extract<ChecklistItemStatus, "done" | "blocked" | "not_applicable"> | null;
   blockingNote: string | null;
+  // Only meaningful when statusOverride is "done" -- when a human closes
+  // an item, the API route stamps this; there is no equivalent timestamp
+  // for auto-computed "done" signals, since those aren't events, they're
+  // a live read of current state.
+  completedAt: string | null;
 };
 
 // A manual override always wins over the auto-computed signal -- a human
@@ -49,9 +54,11 @@ export function calculateLaunchChecklist(
       category: definition.category,
       label: definition.label,
       team: definition.team,
+      blocking: definition.blocking,
       status,
       note,
       targetDate: overlay?.targetDate ?? null,
+      completedAt: status === "done" ? (overlay?.completedAt ?? null) : null,
       source: overlay?.statusOverride ? "manual" : "auto",
     };
   });

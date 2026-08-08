@@ -26,7 +26,7 @@ export default async function ProductDevelopmentPage({ searchParams }: PageProps
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-700">Производство товара</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Подготовка товаров</h2>
           <p className="mt-1 text-xs text-slate-500">{rows.length} товаров в работе</p>
         </div>
         <div className="flex rounded-lg border border-slate-300 p-0.5 text-xs font-medium">

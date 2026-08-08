@@ -126,7 +126,7 @@ export async function resolveLaunchChecklist(
 
   const { data: overlayRows } = await supabase
     .from("commercial_product_launch_tasks")
-    .select("item_key, target_date, status_override, blocking_note")
+    .select("item_key, target_date, status_override, blocking_note, completed_at")
     .eq("commercial_product_id", params.commercialProductId);
 
   const overlays: ManualOverlay[] = (overlayRows ?? []).map((row) => ({
@@ -134,6 +134,7 @@ export async function resolveLaunchChecklist(
     targetDate: row.target_date as string | null,
     statusOverride: row.status_override as ManualOverlay["statusOverride"],
     blockingNote: row.blocking_note as string | null,
+    completedAt: row.completed_at as string | null,
   }));
 
   return calculateLaunchChecklist(autoSignals, overlays);

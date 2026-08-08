@@ -14,7 +14,7 @@ export default async function OpportunityQueuePage() {
   return (
     <section>
       <div className="mb-4">
-        <h2 className="text-sm font-semibold text-slate-700">Очередь возможностей</h2>
+        <h2 className="text-sm font-semibold text-slate-700">Товары на рассмотрении</h2>
         <p className="mt-1 text-xs text-slate-500">
           Предложения поставщиков, которые ещё не решено продавать. Ни один товар не попадает в
           ассортимент без явного решения здесь.

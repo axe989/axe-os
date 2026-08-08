@@ -34,17 +34,18 @@ describe("calculateLaunchChecklist", () => {
   it("lets a manual status override win over the automatic signal", () => {
     const result = calculateLaunchChecklist(
       [{ key: "supplier_available", status: "blocked", note: "system says blocked" }],
-      [{ key: "supplier_available", targetDate: null, statusOverride: "done", blockingNote: null }],
+      [{ key: "supplier_available", targetDate: null, statusOverride: "done", blockingNote: null, completedAt: "2026-08-08T12:00:00Z" }],
     );
     const item = result.items.find((i) => i.key === "supplier_available")!;
     expect(item.status).toBe("done");
     expect(item.source).toBe("manual");
+    expect(item.completedAt).toBe("2026-08-08T12:00:00Z");
   });
 
   it("carries the blocking note through from a manual override", () => {
     const result = calculateLaunchChecklist(
       [],
-      [{ key: "sale_price_set", targetDate: "2026-09-01", statusOverride: "blocked", blockingNote: "Ждём согласования скидки" }],
+      [{ key: "sale_price_set", targetDate: "2026-09-01", statusOverride: "blocked", blockingNote: "Ждём согласования скидки", completedAt: null }],
     );
     const item = result.items.find((i) => i.key === "sale_price_set")!;
     expect(item.status).toBe("blocked");
@@ -55,7 +56,7 @@ describe("calculateLaunchChecklist", () => {
   it("falls back to the auto note when there is a target date but no override", () => {
     const result = calculateLaunchChecklist(
       [{ key: "primary_photo_gallery", status: "blocked", note: "Фотографии отсутствуют" }],
-      [{ key: "primary_photo_gallery", targetDate: "2026-09-10", statusOverride: null, blockingNote: null }],
+      [{ key: "primary_photo_gallery", targetDate: "2026-09-10", statusOverride: null, blockingNote: null, completedAt: null }],
     );
     const item = result.items.find((i) => i.key === "primary_photo_gallery")!;
     expect(item.status).toBe("blocked");
@@ -66,7 +67,7 @@ describe("calculateLaunchChecklist", () => {
   it("shows a manual note even when the human didn't also override the status", () => {
     const result = calculateLaunchChecklist(
       [{ key: "primary_photo_gallery", status: "blocked", note: "Фотографии отсутствуют" }],
-      [{ key: "primary_photo_gallery", targetDate: "2026-09-15", statusOverride: null, blockingNote: "Фотосессия запланирована на следующую неделю" }],
+      [{ key: "primary_photo_gallery", targetDate: "2026-09-15", statusOverride: null, blockingNote: "Фотосессия запланирована на следующую неделю", completedAt: null }],
     );
     const item = result.items.find((i) => i.key === "primary_photo_gallery")!;
     expect(item.status).toBe("blocked"); // still auto-derived, only the note is manual

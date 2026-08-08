@@ -60,12 +60,17 @@ function EditableRow({ commercialProductId, item, onSaved }: { commercialProduct
     <>
       <tr className="hover:bg-slate-50">
         <td className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-400">{CHECKLIST_CATEGORY_LABELS[item.category]}</td>
-        <td className="px-4 py-3 text-slate-900">{item.label}</td>
+        <td className="px-4 py-3 text-slate-900">
+          {item.label}
+          {!item.blocking ? <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">необязательно</span> : null}
+        </td>
         <td className="px-4 py-3">
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClassName(item.status)}`}>{CHECKLIST_STATUS_LABELS[item.status]}</span>
         </td>
         <td className="px-4 py-3 text-slate-600">{LAUNCH_TEAM_LABELS[item.team]}</td>
-        <td className="px-4 py-3 text-xs text-slate-500">{formatDate(item.targetDate)}</td>
+        <td className="px-4 py-3 text-xs text-slate-500">
+          {item.status === "done" && item.completedAt ? `выполнено ${formatDate(item.completedAt)}` : formatDate(item.targetDate)}
+        </td>
         <td className="px-4 py-3 text-xs text-slate-500">{item.note ?? "—"}</td>
         <td className="px-4 py-3 text-right">
           <button type="button" onClick={() => setOpen((v) => !v)} className="text-xs font-medium text-blue-600 hover:underline">
