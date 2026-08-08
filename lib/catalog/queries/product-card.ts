@@ -2,8 +2,38 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { resolveMediaSet } from "../media/resolve-media-set";
 import { resolveLaunchChecklist } from "../checklist/resolve-checklist";
 import { LAUNCH_TEAM_LABELS } from "../checklist/labels";
+import { parseCanonicalCode } from "../attributes/resolve-translation";
 import type { LaunchChecklist } from "../checklist/types";
-import type { BundleComponent, ProductWorkflowStatus } from "../types";
+import type { AttributeDictionaryValue, BundleComponent, ProductWorkflowStatus } from "../types";
+
+// technical_attributes stores dictionary-backed dimensions as canonical
+// codes ("connection.side"), never their display label -- that's correct
+// for storage (see architecture: canonical/label/channel-translation are
+// three separate things), but showing the raw code on the Product Card
+// is a bug, not the intended UI. Swap each recognizable canonical code
+// for its real display_label; anything that isn't a dictionary code
+// (measurements, booleans, raw manufacturer text) passes through as-is.
+function resolveDisplayAttributes(
+  technicalAttributes: Record<string, unknown>,
+  dictionaryValues: AttributeDictionaryValue[],
+): Record<string, unknown> {
+  const labelByCode = new Map(
+    dictionaryValues.map((v) => [`${v.dictionary_code}.${v.value_code}`, v.display_label]),
+  );
+
+  const resolveOne = (value: unknown): unknown => {
+    if (typeof value !== "string") return value;
+    if (!parseCanonicalCode(value)) return value;
+    return labelByCode.get(value) ?? value;
+  };
+
+  return Object.fromEntries(
+    Object.entries(technicalAttributes).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value.map(resolveOne) : resolveOne(value),
+    ]),
+  );
+}
 
 export type ProductCardMediaItem = {
   role: string;
@@ -140,6 +170,12 @@ export async function getProductCard(commercialProductId: string): Promise<Produ
     .select("id, sales_channel, external_sku, title, listing_status, current_sale_price")
     .eq("commercial_product_id", commercialProductId);
 
+  const rawTechnicalAttributes = ((master as { technical_attributes: Record<string, unknown> } | null)?.technical_attributes ?? {}) as Record<string, unknown>;
+  const { data: dictionaryValues } = await supabase
+    .from("attribute_dictionary_values")
+    .select("id, dictionary_code, value_code, display_label, created_at");
+  const technicalAttributes = resolveDisplayAttributes(rawTechnicalAttributes, (dictionaryValues ?? []) as AttributeDictionaryValue[]);
+
   const checklist = await resolveLaunchChecklist(supabase, { commercialProductId });
   const nextItem = checklist.items.find((item) => item.status !== "done" && item.status !== "not_applicable") ?? null;
 
@@ -151,7 +187,7 @@ export async function getProductCard(commercialProductId: string): Promise<Produ
     manufacturerSku: (master as { manufacturer_sku: string | null } | null)?.manufacturer_sku ?? null,
     brandName: (brand as { name: string } | null)?.name ?? null,
     categoryName: (category as { name: string } | null)?.name ?? null,
-    technicalAttributes: ((master as { technical_attributes: Record<string, unknown> } | null)?.technical_attributes ?? {}) as Record<string, unknown>,
+    technicalAttributes,
     status: product.status as ProductWorkflowStatus,
     bundleComponents: Array.isArray(product.bundle_components) ? (product.bundle_components as BundleComponent[]) : [],
     contentTitle: (contentVariant?.title as string | null) ?? null,

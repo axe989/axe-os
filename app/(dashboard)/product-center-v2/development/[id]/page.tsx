@@ -67,9 +67,9 @@ export default async function ProductCardPage({ params }: PageProps) {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[240px_1fr_280px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
         {/* Left: media & documents */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Изображения</h3>
             {data.media.length > 0 ? (
@@ -104,7 +104,7 @@ export default async function ProductCardPage({ params }: PageProps) {
         </div>
 
         {/* Center: supplier, specs, content, bundle, checklist */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Предложение поставщика</h3>
             <div className="grid grid-cols-3 gap-4 text-sm">
@@ -152,7 +152,7 @@ export default async function ProductCardPage({ params }: PageProps) {
         </div>
 
         {/* Right: marketplace, pricing, performance */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Цена и маржа</h3>
             <div className="space-y-2 text-sm">
