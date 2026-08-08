@@ -9,6 +9,11 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeZone: "Asia/Almaty" }).format(new Date(value));
 }
 
+function formatMoney(value: number | null) {
+  if (value === null) return "—";
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " ₸";
+}
+
 function readinessClassName(pct: number) {
   if (pct >= 100) return "bg-emerald-500";
   if (pct >= 50) return "bg-amber-500";
@@ -87,10 +92,14 @@ export default async function ProductDevelopmentPage({ searchParams }: PageProps
               <tr>
                 <th className="px-4 py-3">Товар</th>
                 <th className="px-4 py-3">Стадия</th>
+                <th className="px-4 py-3">Закупка</th>
+                <th className="px-4 py-3">Продажа</th>
+                <th className="px-4 py-3">Маржа</th>
                 <th className="px-4 py-3">Готовность чек-листа</th>
                 <th className="px-4 py-3">Следующее действие</th>
                 <th className="px-4 py-3">Ответственный</th>
-                <th className="px-4 py-3">Целевая дата</th>
+                <th className="px-4 py-3">Плановая дата запуска</th>
+                <th className="px-4 py-3">Marketplace</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -107,6 +116,9 @@ export default async function ProductDevelopmentPage({ searchParams }: PageProps
                     <td className="px-4 py-3">
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{stage?.label ?? row.status}</span>
                     </td>
+                    <td className="px-4 py-3 text-xs text-slate-600">{formatMoney(row.purchasePrice)}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600">{formatMoney(row.salePrice)}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600">{row.marginPercent !== null ? `${row.marginPercent.toFixed(1)}%` : "—"}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
@@ -118,13 +130,14 @@ export default async function ProductDevelopmentPage({ searchParams }: PageProps
                     <td className="px-4 py-3 text-xs text-slate-600">{row.nextActionLabel ?? <span className="text-emerald-600">Готово к запуску</span>}</td>
                     <td className="px-4 py-3 text-xs text-slate-500">{row.nextActionTeam ?? "—"}</td>
                     <td className="px-4 py-3 text-xs text-slate-500">{formatDate(row.targetDate) ?? "не назначена"}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">{row.listingCount > 0 ? `${row.listingCount} листинг(ов)` : "не опубликован"}</td>
                   </tr>
                 );
               })}
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
-                    Пока нет товаров в производстве
+                  <td colSpan={10} className="px-4 py-10 text-center text-slate-400">
+                    Пока нет товаров в подготовке
                   </td>
                 </tr>
               ) : null}

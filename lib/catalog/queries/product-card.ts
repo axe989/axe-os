@@ -2,6 +2,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { resolveMediaSet } from "../media/resolve-media-set";
 import { resolveLaunchChecklist } from "../checklist/resolve-checklist";
 import { LAUNCH_TEAM_LABELS } from "../checklist/labels";
+import { pickNextAction, nextActionLabelFor } from "../checklist/next-action";
 import { parseCanonicalCode } from "../attributes/resolve-translation";
 import type { LaunchChecklist } from "../checklist/types";
 import type { AttributeDictionaryValue, BundleComponent, ProductWorkflowStatus } from "../types";
@@ -177,7 +178,7 @@ export async function getProductCard(commercialProductId: string): Promise<Produ
   const technicalAttributes = resolveDisplayAttributes(rawTechnicalAttributes, (dictionaryValues ?? []) as AttributeDictionaryValue[]);
 
   const checklist = await resolveLaunchChecklist(supabase, { commercialProductId });
-  const nextItem = checklist.items.find((item) => item.status !== "done" && item.status !== "not_applicable") ?? null;
+  const nextItem = pickNextAction(checklist);
 
   return {
     commercialProductId,
@@ -208,7 +209,7 @@ export async function getProductCard(commercialProductId: string): Promise<Produ
       currentSalePrice: l.current_sale_price as number | null,
     })),
     checklist,
-    nextActionLabel: nextItem?.label ?? null,
+    nextActionLabel: nextItem ? nextActionLabelFor(nextItem) : null,
     nextActionTeam: nextItem ? LAUNCH_TEAM_LABELS[nextItem.team] : null,
     targetDate: nextItem?.targetDate ?? null,
   };
