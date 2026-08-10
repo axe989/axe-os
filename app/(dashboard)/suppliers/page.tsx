@@ -4,6 +4,7 @@ type Supplier = {
   id: string;
   name: string;
   legal_name: string | null;
+  contact_name: string | null;
   phone: string | null;
   email: string | null;
   is_active: boolean;
@@ -14,7 +15,7 @@ export default async function SuppliersPage() {
 
   const { data: suppliers, error } = await supabase
     .from("suppliers")
-    .select("id, name, legal_name, phone, email, is_active")
+    .select("id, name, legal_name, contact_name, phone, email, is_active")
     .order("name");
 
   return (
@@ -46,6 +47,7 @@ export default async function SuppliersPage() {
                 <tr>
                   <th className="px-4 py-3 font-medium">Название</th>
                   <th className="px-4 py-3 font-medium">Юридическое лицо</th>
+                  <th className="px-4 py-3 font-medium">Контактное лицо</th>
                   <th className="px-4 py-3 font-medium">Телефон</th>
                   <th className="px-4 py-3 font-medium">Статус</th>
                 </tr>
@@ -60,6 +62,10 @@ export default async function SuppliersPage() {
 
                     <td className="px-4 py-4 text-slate-600">
                       {supplier.legal_name ?? "—"}
+                    </td>
+
+                    <td className="px-4 py-4 text-slate-600">
+                      {supplier.contact_name ?? "—"}
                     </td>
 
                     <td className="px-4 py-4 text-slate-600">
